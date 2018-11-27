@@ -68,5 +68,3 @@ add_executable(test_binaryfromtty readUSBserial/binaryfromtty.c)
 #target_link_libraries(test_blink ${CMAKE_SOURCE_DIR}/../libbcm2835/libbcm2835.a)
 
 add_executable(test_csimpTTY test_apps/test_csimpTTY.cpp mylibs/csimpTTY.cpp)
-
-

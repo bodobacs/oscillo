@@ -1,6 +1,4 @@
 //csimpTTY.h
-//simple interface for tty reading code from stackoverflow
-//https://stackoverflow.com/a/6947758
 //based on OReilly__POSIX_Programmers_Guide
 
 #include <string>
@@ -31,6 +29,7 @@ B0, B50, B75, B110, B134, B150, B200, B300, B600, B1200, B1800, B2400, B4800,
 B9600, B19200, B38400, B57600, B115200, B230400, B460800, B500000, B576000,
 B921600, B1000000, B1152000, B1500000, B2000000, B2500000, B3000000, B3500000, B4000000*/
 
+//return 0 error, 1 success
 int init(unsigned int baud = B9600, std::string filename = "/dev/ttyACM0");
 int readin();
 void print(void);

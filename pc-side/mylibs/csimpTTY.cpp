@@ -8,7 +8,7 @@
 
 csimpTTY::csimpTTY()
 {
-	fd = 0;
+	fd = -1;
 	buffer = new unsigned char[buffer_size];
 }
 
@@ -17,7 +17,7 @@ csimpTTY::~csimpTTY()
 	if(fd)
 	{
 		tcsetattr (fd, TCSANOW, &oldtty);
-		close(fd);
+		close(fd); fd = -1;
 	}
 
 	delete[] buffer; buffer = 0;
@@ -27,14 +27,10 @@ int csimpTTY::init(unsigned int baud, const std::string portname)
 {
 	fd = open(portname.c_str(), O_RDWR | O_NOCTTY | O_SYNC);
 	
-	if (fd < 0){
-		printf("error %d opening %s: %s", errno, portname, strerror (errno));
-		return 0;
-	}
+	if(fd >= 0 && set_interface_attribs (fd, baud, 0)) return 1;
+	else{printf("error %d opening %s: %s", errno, portname, strerror (errno));}
 
-	set_interface_attribs (fd, baud, 0);	// set speed to 115,200 bps, 8n1 (no parity)
-
-	return 1;
+	return 0;
 }
 
 int csimpTTY::set_interface_attribs(int fd, int baud, int parity)

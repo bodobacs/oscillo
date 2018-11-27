@@ -1,6 +1,8 @@
-/* #include <stdio.h>
+/*
  char sttycmd[256] = "stty -F /dev/ttyACM0 cs8 9600 ignbrk -brkint -icrnl -imaxbel -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke noflsh -ixon -crtscts");
  int ardfd = fopen("/dev/ttyACM0", "rw");
+ simple interface for tty reading code from stackoverflow
+ https://stackoverflow.com/a/6947758
 */
 
 #include <errno.h>
