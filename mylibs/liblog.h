@@ -8,5 +8,11 @@
 void log_error(const char *format, ...);
 void log_debug(const char *format, ...);
 
+class csimpLog
+{
+public:
+csimpLog(){};
+};
+
 #endif
 
