@@ -12,21 +12,34 @@
 #define DLOG2(m1, m2)
 #endif
 
-const int BUFFER_SIZE = 1000;
+const int BUFFER_SIZE = 500;
+volatile int forward_size = 250; //read this many after trigger
 volatile unsigned char buff[BUFFER_SIZE];
 volatile unsigned int buff_pos = 0;
 volatile unsigned char full = 0;
+volatile unsigned int next_stop = BUFFER_SIZE - 1; //here stop and send data
 
-ISR(ADC_vect)
+struct packet
 {
-  buff[buff_pos] = ADCH;
-  if(buff_pos + 1 == BUFFER_SIZE)
+  unsigned char buffer[];
+};
+
+ISR(ANALOG_COMP_vect)
+{
+  next_stop = buff_pos + forward_size < BUFFER_SIZE ? buff_pos + forward_size : buff_pos + forward_size - BUFFER_SIZE;
+  bitClear(ACSR, ACIE); //disable comparator interrupts
+}
+
+ISR(ADC_vect) //a ADC conversion happened
+{
+  buff[buff_pos] = ADCH; //save voltage value
+  buff_pos + 1 == BUFFER_SIZE ? buff_pos = 0 :  buff_pos++;
+
+  if(buff_pos == next_stop)
   {
-    buff_pos = 0;
+
     full = 1;
-    bitClear(ADCSRA, ADIE); //disable
-  }else{
-    buff_pos++;
+    bitClear(ADCSRA, ADIE); //disable ADC interrupts
   }
 
 //  bitSet(ADCSRA, ADIE); //enable
@@ -66,25 +79,41 @@ DLOG2("ADCSRA: ", ADCSRA)
 //bit 7,5:3 reserved=0 | ACME
 //bit 6 ACME: =0 Analog Comparator Multiplexer Enable (Cannot work together with ADC! Can change comparator negative input, default is AIN1)
 //bit 2:0 ADC Auto Trigger Source (8 modes)
-//ADTS2,ADTS1,ADTS0 = 000 Free Running Mode
 
-ADCSRB = 0;
+//ADCSRA:ADATE = 1 //enable to select trigger mode
+//ADTS2,ADTS1,ADTS0 = 000 Free Running Mode -> Continous conversions
+//ADCSRB = ADTS0; //  = 001 Analog Comparator triggers -> ADC_COMP_vect
+
+ADCSRB = 0; //Free Running
 DLOG2("ADCSRB: ", ADCSRB);
+
 }
 
 //setup Analog Comparator
 void setup_AC(void)
 {
-//disable AIN1 and AIN2 digital buffers
+ACSR &= ~(bit(ACIE) | bit(ACD)); //comparator interrupt disable
+
+//disable AIN1 and AIN2 digital buffers for analog use or power save
 DIDR1 |= bit(AIN1D) | bit(AIN0D);
 DLOG2("DIDR1", DIDR1)
-//ACSR register
-ACSR &= ~(bit(ACD));
+
+//ACSR = Analog Comparator Control and Status Register
+//:ACD = 1 -> Analog Comparator Disable
+//3:ACIE = 1 -> Analog Comparator Interrupt Enable
+//6:ACBG = 1 -> Analog Comparator Bandgap Select (fixed bandgap reference voltage); 0 -> AIN0; selects comparator positive input
+//1:0:ACISn:Analog Comparator Interrupt Mode Select
+//ACIS1 ACIS0 = 1 1 -> triggered by rising output edge
+
+ACSR &= ~bit(ACBG);
+ACSR |= bit(ACIS1) | bit(ACIS0);
+
+//ACSR |= bit(ACIE); //comparator interrupt enable
 }
 
 void setup()
 {
-  Serial.begin(9600); //9600 115200 230400, 345600, 460800
+  Serial.begin(115200); //9600 115200 230400, 345600, 460800
   while(!Serial);
   
   setup_AC();
@@ -93,22 +122,26 @@ void setup()
   setup_ADC();
   DLOG("Setup ADC done.");
   
-  
   DLOG("Setup done.");
+  pinMode(13, OUTPUT); //blink
 }
+volatile char blink = HIGH;
 
 void loop()
 {
-  //  while(!Serial.available());
-  // put your main code here, to run repeatedly:
-  //trigger?
-  //mintavételi freq?
+  //visual feedback
+  digitalWrite(13, blink = blink == HIGH ? LOW : HIGH);   // turn the LED on (HIGH is the voltage level)
+  //delay(1000);
 
   if(full)
   {
-    Serial.write((char *)buff, BUFFER_SIZE);
-//    delay(2000);
+    Serial.write((unsigned char *)&(buff[next_stop]), BUFFER_SIZE - next_stop);
+    Serial.flush();
+    Serial.write((unsigned char *)&(buff[0]), next_stop + 1);    
+
     full = 0;
-    bitSet(ADCSRA, ADIE); //restart interrupts
+      //reenable interrupts
+    bitSet(ADCSRA, ADIE);
+    bitSet(ACSR, ACIE);
   }
 }

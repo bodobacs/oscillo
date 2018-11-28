@@ -12,7 +12,7 @@ void setup()
   // Open the port that the board is connected to and use the same speed (9600 bps)
   port = new Serial(this, Serial.list()[0], 115200);
   printArray(Serial.list());
-  values = new byte[width];
+  values = new byte[1500];
   zoom = 1.0f;
   smooth();
   println("Setup done");
@@ -36,7 +36,68 @@ int last = 0;
 boolean pause = false;
 void draw()
 {
-  draw2();
+  draw3();
+}
+
+int ntoread = 0;
+void draw3()
+{
+  int navail = port.available();
+ 
+  if(!pause && navail != 0)
+  {
+    //adatok beolvasása soros portról
+    ntoread = navail < values.length ? navail : values.length;
+
+    for(int j = 0; j < ntoread; j++)
+    {
+       values[j] = byte(port.read());
+       println(" ", int(0xff & values[j]));
+    }
+  }
+  background(0);
+
+  stroke(255, 0, 0); //piros
+  line(0, height-10, width, height-10);
+
+  stroke(255); //fehér
+
+  int scale = 1;
+
+  for(int k = 0; k < width && k < ntoread; k++)
+  {
+    point(k, height - 10 - (scale * int(0xff & values[k])));
+  }
+}
+
+void draw2()
+{
+  if(!pause)
+  {
+    int j = last < values.length ? last : 0;
+    
+    //adatok beolvasása soros portról
+    for(; 0 < port.available() && j < values.length; j++)
+    {
+       values[j] = byte(port.read());
+       println(" ", int(0xff & values[j]));
+    }
+  
+    last = j;
+  }
+  background(0);
+
+  stroke(255, 0, 0); //piros
+  line(0, height-10, width, height-10);
+
+  stroke(255); //fehér
+
+  int scale = 1;
+
+  for(int k = 0; k < width && k < values.length; k++)
+  {
+    point(k, height - 10 - (scale * int(0xff & values[k])));
+  }
 }
 
 void draw1()
@@ -67,34 +128,4 @@ void draw1()
     i++;
     if(i == values.length) i = 0;
   }while(i != last);
-}
-
-void draw2()
-{
-  if(!pause)
-  {
-    int j = last < values.length ? last : 0;
-    
-    //adatok beolvasása soros portról
-    for(; 0 < port.available() && j < values.length; j++)
-    {
-       values[j] = byte(port.read());
-       println(" ", int(0xff & values[j]));
-    }
-  
-    last = j;
-  }
-  background(0);
-
-  stroke(255, 0, 0); //piros
-  line(0, height-10, width, height-10);
-
-  stroke(255);//fehér
-
-  int scale = 1;
-
-  for(int k = 0; k < width && k < values.length; k++)
-  {
-    point(k, height - 10 - (scale * int(0xff & values[k])));
-  }
 }
