@@ -41,7 +41,7 @@ int csimpTTY::set_interface_attribs(int fd, int baud, int parity)
 
         if(!tcgetattr (fd, &tty) && !tcgetattr (fd, &oldtty))
         {
-			tty.c_cc[VMIN]  = 100; //packet size?		// read doesn't block
+			tty.c_cc[VMIN]  = 255; //packet size?		// read doesn't block
 			tty.c_cc[VTIME] = 1;						// 0.5 seconds read timeout
 
 			//INPUT flags
@@ -87,7 +87,8 @@ void csimpTTY::print(void)
 	for(int i = 0; i<nrecieved; i++)
 	{
 //		if(!(i%20)) printf("\n");
-		unsigned int a = *(buffer+i);
-		printf("%d ", a);
+		printf("%c", buffer[i]);
+		if(!(i % 20)) printf("\n");
 	}
 }
+

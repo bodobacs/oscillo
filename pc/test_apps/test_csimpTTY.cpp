@@ -17,7 +17,7 @@ csimptty.init(B115200);
 while(keepRunning)
 {
 //	printf("\nread: %d bytes\n", csimptty.readin());
-	csimptty.readin();
+	printf("\n Got %d bytes\n", csimptty.readin());
 	csimptty.print();
 }//while
 

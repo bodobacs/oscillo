@@ -5,6 +5,7 @@ byte val;      // Data received from the serial port
 byte[] values;
 float zoom;
 
+
 void setup() 
 {
   size(1280, 480);
@@ -39,7 +40,40 @@ void draw()
   draw3();
 }
 
+
 int ntoread = 0;
+int trig = 0;
+void draw4()
+{
+  int navail = port.available();
+ 
+  if(!pause && navail != 0)
+  {
+    //adatok beolvasása soros portról
+    ntoread = navail; // < values.length ? navail : values.length;
+
+    int packet_size  = port.read();    
+    int trig = port.read(); //index where triggering happend
+
+    println("packet size: ", packet_size);
+    println("trig: ", trig);   
+
+    ntoread = port.readBytes(values);
+}
+  background(0);
+
+  stroke(255, 0, 0); //piros
+  line(0, height-10, width, height-10);
+  stroke(255); //fehér
+  int scale = 1;
+
+  for(int k = trig; k < width && k < ntoread; k++)
+  {
+    point(k, height - 10 - (scale * int(0xff & values[k])));
+  }
+}
+
+
 void draw3()
 {
   int navail = port.available();
@@ -48,12 +82,9 @@ void draw3()
   {
     //adatok beolvasása soros portról
     ntoread = navail < values.length ? navail : values.length;
-
-    for(int j = 0; j < ntoread; j++)
-    {
-       values[j] = byte(port.read());
-       println(" ", int(0xff & values[j]));
-    }
+    
+    ntoread = port.readBytes(values);
+    println("bytes: ", ntoread);
   }
   background(0);
 
