@@ -1,4 +1,5 @@
-//EZ JO VOLT, BUFFERT TOLT
+//NE ÍRD ÁT
+//EZ MŰKÖDIK 1000Byte-ot beolvas és kirajzolja
 import processing.serial.*;
 
 Serial port;  // Create object from Serial class
@@ -10,10 +11,7 @@ void setup()
 {
   size(500, 500);
   
-  port = new Serial(this, Serial.list()[0], 9600);//115200
-  port.bufferUntil(0); //buffering data until 0 found  
-//printArray(Serial.list());
-
+  port = new Serial(this, Serial.list()[0], 115200);//9600
   values = new byte[2000];
   
   zoom = 1.0f;
@@ -41,10 +39,10 @@ int nread = 0;
 void serialEvent(Serial p)
 {
   int av;
-  if(0 < (av = port.available()))
+  if(1000 < (av = port.available()))
   {
     println("Available: ", av );
-    nread = port.readBytesUntil(0, values); //amig nullát nem talál
+    nread = port.readBytes(values); //amig nullát nem talál
   }
 } 
 
@@ -57,12 +55,6 @@ void draw()
   
     
     stroke(255);//fehér
-    
-//    printArray(values);
-    
-    for(int k = 0; k < nread; k++)
-    {
-//    point(k, (int(0xff & values[k])));
-      point(k, (int(values[k])));
-    }
+   
+    for(int k = 0; k < nread; k++) point(k, (int(values[k])));
 }

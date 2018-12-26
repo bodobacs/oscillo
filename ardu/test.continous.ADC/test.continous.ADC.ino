@@ -1,5 +1,6 @@
-#define PROBE_PIN A0 //ADC0
-
+//NE ÍRD ÁT
+//EZ MŰKÖDIK 1000Bytonként küldi az ADC-n mért értékeket az A0-pinről
+//processing flow_in_buffer_client
 //#define DEBUG
 
 #ifdef DEBUG
@@ -14,20 +15,19 @@ const int BUFFER_SIZE = 1000;
 volatile unsigned char buff[BUFFER_SIZE];
 volatile unsigned int buff_pos = 0;
 volatile unsigned char full = 0;
+volatile unsigned char count = 0;
+
 ISR(ADC_vect)
 {
   buff[buff_pos] = ADCH;
-  if(buff_pos + 1 == BUFFER_SIZE)
+//  buff[buff_pos] = count++; //ha van interrupt ferde vonalak jelennek meg (növekvő számok)
+  buff_pos = (buff_pos + 1)%BUFFER_SIZE;
+
+  if(!buff_pos)
   {
-    buff_pos = 0;
     full = 1;
     bitClear(ADCSRA, ADIE); //disable
-  }else{
-    buff_pos++;
   }
-
-//  bitSet(ADCSRA, ADIE); //enable
-//  bitClear(ADCSRA, ADIE); //disable
 }
 
 //setup A/D converter
@@ -69,44 +69,22 @@ ADCSRB = 0;
 DLOG2("ADCSRB: ", ADCSRB);
 }
 
-//setup Analog Comparator
-void setup_AC(void)
-{
-//disable AIN1 and AIN2 digital buffers
-DIDR1 |= bit(AIN1D) | bit(AIN0D);
-DLOG2("DIDR1", DIDR1)
-//ACSR register
-ACSR &= ~(bit(ACD));
-}
-
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
   while(!Serial);
-  
-  setup_AC();
-  DLOG("Setup AC done.");
   
   setup_ADC();
   DLOG("Setup ADC done.");
-  
-  
-  DLOG("Setup done.");
 }
 
 void loop()
 {
-  //  while(!Serial.available());
-  // put your main code here, to run repeatedly:
-  //trigger?
-  //mintavételi freq?
-
   if(full)
   {
-    Serial.write((char *)buff, BUFFER_SIZE);
-//    delay(2000);
+    Serial.write((unsigned char *)buff, BUFFER_SIZE);
+
     full = 0;
     bitSet(ADCSRA, ADIE); //restart interrupts
   }
 }
-

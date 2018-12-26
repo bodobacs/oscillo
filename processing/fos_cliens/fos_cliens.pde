@@ -1,3 +1,5 @@
+//EZ EGY SZAR
+
 import processing.serial.*;
 
 Serial port;  // Create object from Serial class
