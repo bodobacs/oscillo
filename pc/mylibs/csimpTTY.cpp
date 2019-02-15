@@ -1,3 +1,5 @@
+/* library to communicate, serial port in non-canonical/raw mode */
+
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -9,7 +11,10 @@
 csimpTTY::csimpTTY()
 {
 	fd = -1;
-	buffer = new unsigned char[buffer_size];
+	
+	buffer_size = 2000;
+	buffer = nullptr;
+	nrecieved = 0;
 }
 
 csimpTTY::~csimpTTY()
@@ -17,23 +22,35 @@ csimpTTY::~csimpTTY()
 	if(fd)
 	{
 		tcsetattr (fd, TCSANOW, &oldtty);
-		close(fd); fd = -1;
+ 		close(fd); fd = -1;
 	}
 
-	delete[] buffer; buffer = 0;
+	if(buffer != nullptr)
+	{
+		delete[] buffer; buffer = nullptr;
+	}
 }
 
-int csimpTTY::init(unsigned int baud, const std::string portname)
+bool csimpTTY::init(unsigned int baud, unsigned int nbuffer, const std::string portname)
 {
-	fd = open(portname.c_str(), O_RDWR | O_NOCTTY | O_SYNC);
-	
-	if(fd >= 0 && set_interface_attribs (fd, baud, 0)) return 1;
-	else{printf("error %d opening %s: %s", errno, portname, strerror (errno));}
-
-	return 0;
+	if(0 < nbuffer && buffer == nullptr)
+	{
+		buffer_size = nbuffer;
+		buffer = new unsigned char[buffer_size];
+		if(buffer != nullptr)
+		{
+			fd = open(portname.c_str(), O_RDWR | O_NOCTTY | O_SYNC);// | O_NONBLOCK);
+			
+			if(fd >= 0 && set_interface_attribs (fd, baud, 0))
+			{
+				return true;
+			}else printf("error %d opening %s: %s", errno, portname, strerror (errno));
+		}else printf("error buffer allocation");
+	}else printf("init: parameter error");
+	return false;
 }
 
-int csimpTTY::set_interface_attribs(int fd, int baud, int parity)
+bool csimpTTY::set_interface_attribs(int fd, int baud, int parity)
 {
         struct termios tty;
         memset (&tty, 0, sizeof tty);
@@ -41,8 +58,8 @@ int csimpTTY::set_interface_attribs(int fd, int baud, int parity)
 
         if(!tcgetattr (fd, &tty) && !tcgetattr (fd, &oldtty))
         {
-			tty.c_cc[VMIN]  = 255; //packet size?		// read doesn't block
-			tty.c_cc[VTIME] = 1;						// 0.5 seconds read timeout
+			tty.c_cc[VMIN]  = 255; //this c_cc is a fing unsigned char so packet size cannot be more than 255
+			tty.c_cc[VTIME] = 0;   //this two line: until 255 byte recieved, blocks read(), no time limit
 
 			//INPUT flags
 			tty.c_iflag &= ~(BRKINT | IGNBRK | PARMRK | INPCK
@@ -68,13 +85,14 @@ int csimpTTY::set_interface_attribs(int fd, int baud, int parity)
 				{
 					if(-1 != tcsetattr(fd, TCSANOW, &tty))
 					{
-						return 1;
-					}else{printf("tcsetattr %d", errno);}
-				}else{printf("tcflush %d", errno);}
-			}else{printf("cfsetospeed %d", errno);}
-		}else{printf("tcgetattr %d", errno);}
+//						tcflush(fd, TCIOFLUSH); //clear buffers, NO EFFECT maybe buffered data on arduino side?
+						return true;
+					}else printf("tcsetattr %d", errno);
+				}else printf("tcflush %d", errno);
+			}else printf("cfsetospeed %d", errno);
+		}else printf("tcgetattr %d", errno);
 
-        return 0;
+        return false;
 }
 
 int csimpTTY::readin(void)
@@ -87,8 +105,8 @@ void csimpTTY::print(void)
 	for(int i = 0; i<nrecieved; i++)
 	{
 //		if(!(i%20)) printf("\n");
-		printf("%c", buffer[i]);
+		printf("%02X ", buffer[i]);
+
 		if(!(i % 20)) printf("\n");
 	}
 }
-

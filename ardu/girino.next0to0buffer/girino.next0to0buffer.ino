@@ -38,6 +38,35 @@ ISR(ADC_vect) //a ADC conversion happened
   }else buff[buff_pos] = ADCH ? ADCH : 1; //save voltage value; 0 special character so written to 1 INTENTIONAL MEASURING ERROR
 }
 
+unsigned char glob_ADC_div = 7; // [0-7]
+void set_ADC_div(int d)
+{
+// These bits determine the division factor between the system clock
+// frequency and the input clock to the ADC.
+//  ADPS2 ADPS1 ADPS0 Division Factor
+// 0: 0 0 0 2
+// 1: 0 0 1 2
+// 2: 0 1 0 4
+// 3: 0 1 1 8
+// 4: 1 0 0 16
+// 5: 1 0 1 32
+// 6: 1 1 0 64
+// 7: 1 1 1 128
+
+  if(0 <= d && d < 8)
+  {
+    ADCSRA &= (255-7);//11111000
+    ADCSRA |= d;
+    
+  /*  
+    bitSet(ADCSRA,ADPS2);
+    bitSet(ADCSRA,ADPS1);
+    bitSet(ADCSRA,ADPS0); //--> 128
+  */
+  }
+ 
+}
+
 //setup A/D converter
 void setup_ADC(void)
 {
@@ -84,24 +113,9 @@ bitSet(ADMUX, MUX2);
 bitClear(ADMUX, MUX1);
 bitSet(ADMUX, MUX0); //-> ADC5
 
-// These bits determine the division factor between the system clock
-// frequency and the input clock to the ADC.
-//  ADPS2 ADPS1 ADPS0 Division Factor
-//  0 0 0 2
-//  0 0 1 2
-//  0 1 0 4
-//  0 1 1 8
-//  1 0 0 16
-//  1 0 1 32
-//  1 1 0 64
-//  1 1 1 128
-bitSet(ADCSRA,ADPS2);
-bitSet(ADCSRA,ADPS1);
-bitSet(ADCSRA,ADPS0); //--> 128
-
 bitSet(ADCSRA, ADATE); //ADC Auto Trigger Enable
 
-
+set_ADC_div(7); //ADC clock division
 
 //  ADTS2 ADTS1 ADTS0 Trigger source
 //  0 0 0 Free Running mode
@@ -250,14 +264,35 @@ void loop()
     Serial.write((unsigned char *)&(buff[stopindex]), BUFFER_SIZE - stopindex);
     Serial.write((unsigned char *)&(buff[0]), stopindex);
     Serial.flush();
-    Serial.write(0); //null signs end
 
     stopindex = (buff_pos + BUFFER_SIZE - 1) % BUFFER_SIZE; //kikuldi a buffert akkor is ha nincs trigger
+
+    delay(1000);
+
     //reenable interrupts
     bitSet(ADCSRA, ADIE); //enable ADC interrupts vagy ? bitSet(ADCSRA, ADEN); //ON ADC
     bitSet(ACSR, ACIE); //comparator interrupt enable
-    
-    DLOG("Data sent");
   }
-  
+}
+
+//parancskezelés ha kell
+void serialEvent()
+{
+  while (Serial.available())
+  {
+    char command = (char)Serial.read();
+      switch (command)
+      {
+        case 'D':
+          set_ADC_div(glob_ADC_div < 7 ? glob_ADC_div++ : 255);
+        break;
+
+        case 'd':
+          set_ADC_div(glob_ADC_div > 4 ? glob_ADC_div-- : 255);
+        break;
+
+        default:
+          continue;
+      }//switch
+  }//while
 }

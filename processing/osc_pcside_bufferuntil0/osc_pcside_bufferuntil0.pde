@@ -10,7 +10,7 @@ void setup()
   size(1250, 600);
   
   port = new Serial(this, Serial.list()[0], 115200);
-  port.bufferUntil(0); //buffering data until 0 found  
+port.bufferUntil(0); //buffering data until 0 found  
 //printArray(Serial.list());
 
   values = new byte[2000];
@@ -22,15 +22,13 @@ void setup()
 
 void keyPressed() {
   switch (key) {
-    case '+':
-      println(zoom);
+    case 'D':
+      port.write('D');
       break;
-    case '-':
-      if(nread > 1000){ saveBytes("numbers.dat", values); }
+    case 'd':
+      port.write('d');
       break;
     case 's':
-      pause = !pause;
-      println("pause");
       break;
   }
 }
