@@ -1,3 +1,10 @@
+//NE ÍRD ÁT!!!
+//mérés, triggerelés elég jól működik, de az adatküldés-fogadás szar
+//mindenesetre a processing hozzá írt scriptjével [processing/osc_pcside_bufferuntil0/osc_pcside_bufferuntil0.pde]
+//alacsony frekvenciákon szépen rajzolja a hullámokat
+//a packeteket itt 0 értékekkel akartam jelezni és a processing script egész jól fogadja is, de néha buffer tulcsordulást okoz
+//c nyelven a kliens nem szereti, állandóan hiányos a fogadott adat, valószínűleg bonyolultabb termios beállításokat igényel + select()-es forgalomirányítást 
+
 //TELJESEN A GIRINO KOPPINTASA KIS VALTOZTATÁSOKKAL
 //PROCESSING: Buffer0to0Client
 //ADC ANALOG_5 PIN
