@@ -2,17 +2,15 @@
 project(mylibs)
 
 add_library(csimplog csimpLog.cpp)
-target_link_libraries(csimplog)
+target_link_libraries(csimplog csimpsdl)
 
 add_library(csimpsdl csimpSDL.cpp)
-target_link_libraries(csimpsdl)
+target_link_libraries(csimpsdl ${SDL2_LIBRARY})
+#${SDL2_LIBRARY})
 
-add_library(isdl mylibs/isdl.cpp)
-target_link_libraries(isdl ${SDL_LIBRARY} ${SDL_IMAGE_LIBRARIES} ${OPENGL_LIBRARIES})
+add_library(csimptty csimpTTY.cpp)
+target_link_libraries(csimptty)
 
-add_library(csimptty mylibs/csimpTTY.cpp)
-target_link_libraries(csimptty )
-
-add_library(liblog mylibs/liblog.cpp)
-target_link_libraries(liblog )
+add_library(liblog liblog.cpp)
+target_link_libraries(liblog)
 
