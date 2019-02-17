@@ -11,7 +11,7 @@ void intHandler(int dummy){
 int main(int argc, char **argv)
 {
 
-csimpTTY csimptty;
+csimpTTY_buffered csimptty;
 csimptty.init(B115200);
 
 while(keepRunning)

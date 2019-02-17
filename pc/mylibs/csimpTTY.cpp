@@ -7,14 +7,11 @@
 #include <signal.h>
 #include <string.h>
 #include <csimpTTY.h>
+#include <csimpLog.h>
 
 csimpTTY::csimpTTY()
 {
 	fd = -1;
-	
-	buffer_size = 2000;
-	buffer = nullptr;
-	nrecieved = 0;
 }
 
 csimpTTY::~csimpTTY()
@@ -24,33 +21,19 @@ csimpTTY::~csimpTTY()
 		tcsetattr (fd, TCSANOW, &oldtty);
  		close(fd); fd = -1;
 	}
-
-	if(buffer != nullptr)
-	{
-		delete[] buffer; buffer = nullptr;
-	}
 }
 
-bool csimpTTY::init(unsigned int baud, unsigned int nbuffer, const std::string portname)
+bool csimpTTY::init(unsigned int baud, const std::string portname)
 {
-	if(0 < nbuffer && buffer == nullptr)
-	{
-		buffer_size = nbuffer;
-		buffer = new unsigned char[buffer_size];
-		if(buffer != nullptr)
-		{
-			fd = open(portname.c_str(), O_RDWR | O_NOCTTY | O_SYNC);// | O_NONBLOCK);
-			
-			if(fd >= 0 && set_interface_attribs (fd, baud, 0))
-			{
-				return true;
-			}else printf("error %d opening %s: %s", errno, portname, strerror (errno));
-		}else printf("error buffer allocation");
-	}else printf("init: parameter error");
+	fd = open(portname.c_str(), O_RDWR | O_NOCTTY | O_SYNC);// | O_NONBLOCK);
+	
+	if(fd >= 0 && set_interface_attribs (fd, baud)) return true;
+	else printf("Failed opening file:\"%s\" - %u:\"%s\"\n", portname.c_str(), errno, strerror (errno));
+
 	return false;
 }
 
-bool csimpTTY::set_interface_attribs(int fd, int baud, int parity)
+bool csimpTTY::set_interface_attribs(int fd, int baud)
 {
         struct termios tty;
         memset (&tty, 0, sizeof tty);
@@ -95,18 +78,113 @@ bool csimpTTY::set_interface_attribs(int fd, int baud, int parity)
         return false;
 }
 
-int csimpTTY::readin(void)
+/*
+ ************************ csimpTTY_buffered ****************************
+*/
+
+csimpTTY_buffered::csimpTTY_buffered()
 {
-	return (nrecieved = read(fd, buffer, buffer_size));
+	nrecieved = 0;
 }
 
-void csimpTTY::print(void)
+csimpTTY_buffered::~csimpTTY_buffered()
+{
+}
+
+int csimpTTY_buffered::readin(void)
+{
+	return (nrecieved = read(fd, buffer, sizeof(buffer)));
+}
+
+
+void csimpTTY_buffered::print(void)
 {
 	for(int i = 0; i<nrecieved; i++)
 	{
-//		if(!(i%20)) printf("\n");
 		printf("%02X ", buffer[i]);
 
 		if(!(i % 20)) printf("\n");
 	}
+}
+
+
+/*
+ ************************ csimpTTY_packet ****************************
+*/
+
+csimpTTY_packet::csimpTTY_packet()
+{
+	waitingfor_n_th = 0;
+}
+
+csimpTTY_packet::~csimpTTY_packet()
+{
+}
+
+bool csimpTTY_packet::readpacket(const int &r)
+{
+	sserialpacket &sp = packets[r];
+
+	if(packet_size == read(fd, &sp, sizeof(sserialpacket)))
+	{
+		if(
+		sp.k1 == packet_k1 &&
+		sp.k2 == packet_k2 &&
+		sp.k3 == packet_k3 )
+		{
+			return true;
+		}else{
+			flush();
+		}
+	}
+	return false;
+}
+
+bool csimpTTY_packet::readinmessage(void)
+{
+	if(readpacket(waitingfor_n_th))
+	{
+		if(waitingfor_n_th +1 < packets[waitingfor_n_th].sum)
+		{
+			waitingfor_n_th++;
+		}else{
+			waitingfor_n_th = 0;
+			return true;
+		}
+	}
+
+	waitingfor_n_th = 0;
+	return false;
+}
+
+bool csimpTTY_packet::printpacket(int n)
+{
+	sserialpacket &sp = packets[n];
+	csimplog << "packet \"" << n << "\" :"<< std::endl;
+	csimplog << "keys k1: " << int(sp.k1) << ", k2: " << int(sp.k2) << ", k3: " << int(sp.k3) << std::endl;
+	csimplog << "sum: " << int(sp.sum) << ", n_th: " << int(sp.n_th) << ", datasize: " << int(sp.datasize) << std::endl;
+
+	csimplog << "buffer:" << std::endl;
+	for(int i; i < packet_buffer_size; i++)
+	{
+		csimplog << sp.buffer[i];
+	}
+
+	csimplog << "end." << std::endl;
+}
+
+/*reading until stable packets arrive*/
+void csimpTTY_packet::flush(void)
+{
+	unsigned char buf[500];
+	int cnt = 10;
+	
+	while(packet_buffer_size != read(fd, buf, 500) &&
+			buf[0] != packet_k1 &&
+			buf[1] != packet_k2 &&
+			buf[2] != packet_k3 &&
+			cnt--
+	);
+
+	csimplog << "flushed" << std::endl;
 }

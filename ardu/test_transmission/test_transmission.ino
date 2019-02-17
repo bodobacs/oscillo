@@ -12,7 +12,7 @@
 #define DLOG2(m1, m2)
 #endif
 
-byte buffer[256];
+byte buffer[255];
 
 /*
 byte sep_start[3] = { 11, 499, 13 };
@@ -22,11 +22,11 @@ byte sep_end[3] = { 491, 23, 487 };
 void setup()
 {
   buffer[0] = 11;
-  buffer[1] = 499;
+  buffer[1] = 113;
   buffer[2] = 13;
-
+/*
   buffer[252] = 11;
-  buffer[253] = 499;
+  buffer[253] = 113;
   buffer[254] = 13;
 
 /*

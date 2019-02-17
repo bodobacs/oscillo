@@ -4,65 +4,126 @@ a célnak megfelel ne írd át!!!
 teszteli a csimpTTY osztályt: az usb soros portról ("/dev/ttyACM0") olvassa be a bejövő adatokat és kiírja egy tömbbe real-time
 */
 
+#include <SDL.h>
+#include <iostream>
+#include <csimpLog.h>
+#include <csimpSDL.h>
 #include <csimpTTY.h>
-#include <ncurses.h>
+#include <cstring>
 
-class tty0to0 : public csimpTTY
+csimpTTY_packet ctty;
+sserialpacket paks[max_packet_per_msg];
+int pakstodraw = 0;
+
+clock_t lasttime = 0; //CLOCKS_PER_SEC
+unsigned int vtimer = 0;
+
+void submain(void)
 {
-public:
-	tty0to0(){}
-	~tty0to0(){}
+	SDL_Event e;
 
-};
+	while (1)
+	{
+		while (SDL_PollEvent(&e))
+		{
+			switch(e.type)
+			{
+				case SDL_QUIT:
+					return;
 
-int keepRunning = 1;
+				case SDL_KEYDOWN:
+						switch(e.key.keysym.sym)
+						{
+							case SDLK_ESCAPE:
+							return;
 
-void intHandler(int dummy){
-    keepRunning = 0;
+							case SDLK_SPACE: //redraw
+							break;
+							
+							case SDLK_RETURN: //reset
+							break;
+
+							case SDLK_TAB: //clear
+							break;
+
+							default:
+							break;
+						}//switch2
+					break;
+					
+				case SDL_MOUSEBUTTONDOWN:
+					break;
+					
+				case SDL_MOUSEMOTION:
+					break;
+					
+				case SDL_MOUSEBUTTONUP:
+					break;
+								
+				default:
+				break;
+			}
+		}
+
+		if(ctty.readinmessage())
+		{
+			pakstodraw = ctty.get_packet(0).sum;
+/*			for(int i = 0; i < pakstodraw; i++)
+			{
+				std::memcpy(&paks[i], &ctty.get_packet(i), packet_size);
+			}*/
+		}
+
+		//framelimiter
+		clock_t nowtime = clock();
+//		if(0 < pakstodraw && nowtime - lasttime > CLOCKS_PER_SEC * 0.04)
+		{
+			lasttime = nowtime;
+
+			SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 0,0,0,0);
+			SDL_RenderClear(csimpsdl.sdl_ren);
+
+			SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 255,0,0,0);
+			SDL_RenderDrawLine(csimpsdl.sdl_ren, 0,150,1000,150);
+
+			SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 0, 255, 0,0);
+			SDL_RenderDrawLine(csimpsdl.sdl_ren, 0,0, vtimer = vtimer+1 < 1000 ? vtimer + 1 : 0, 0);
+
+			SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 200, 200,200,0);
+
+			int x = 0;
+			for(int i = 0; i < pakstodraw; i++)
+			{
+				for(int j = 0; j < paks[i].datasize; j++)
+				{
+					SDL_RenderDrawPoint(csimpsdl.sdl_ren, x++, 150 - ctty.get_packet(i).buffer[j]);
+//					SDL_RenderDrawPoint(csimpsdl.sdl_ren, x++, 150 - paks[i].buffer[j]);
+//					csimplog << "point(" << x << "," << y << ")" << std::endl;
+				}
+			}
+
+			SDL_RenderPresent(csimpsdl.sdl_ren);
+		}
+	}
 }
-
 
 int main(int argc, char **argv)
 {
-	initscr();			/* Start curses mode 		  */
-	noecho();
-	mvprintw(0,0,"\n Testing ctty class, print info about recieved byte vectors from /dev/ttyACM0. \n Press any key to continoue...\n");
-
-	int maxy, maxx;
-	getmaxyx(stdscr, maxy, maxx);
-
-	refresh();			/* Print it on to the real screen */
-	getch();			/* Wait for user input */
-
-	tty0to0 ctty;
-
-	if(ctty.init(B115200, 2000, "/dev/ttyACM0"))
+	if(csimplog.is_open())
 	{
-		unsigned char *pc = ctty.get_buffer();
+		csimplog << "csimpSDL testing start" << std::endl;
 
-		while(keepRunning)
+		if(csimpsdl.init(std::string("testSDLmain"), 0, 0, 1000, 300))
 		{
-			int n = ctty.readin();
-			if(n > 1){
-				clear();
-				mvprintw(0,0,"Got %d bytes", n); printw(", max shown %d bytes", maxx/4 * (maxy-1));
-				int c = 0; //check printed byte count
-				for(int y = 0; y < maxy && c < n; y++)
-				{
-					for(int x = 0; x < maxx/4 && c < n; x++)
-					{
-						move(y+1, 4*x);
-						printw("%03u ",  *(pc + c));
+			if(ctty.init(B115200, "/dev/ttyACM1"))
+			{
+				submain();
 
-						c++;
-					}
-				}
-				refresh();
+				return 0;
 			}
-		}//while
-	}else printf("\n Got %d bytes\n", ctty.readin());
+		}
+	}
 
-	endwin();
-
-return 0;
+//	csimplog << "Error on exit" << std::endl;
+	return 1;
 }

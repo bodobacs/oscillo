@@ -39,3 +39,8 @@ target_link_libraries(test_0to0ncurses csimptty liblog ncurses)
 add_executable(testsdl testsdl.cpp)
 target_link_libraries(testsdl csimptty csimplog csimpsdl)
 
+#################### osc sdl a ####################
+
+add_executable(oscsdla oscsdla.cpp)
+target_link_libraries(oscsdla csimptty csimplog csimpsdl)
+

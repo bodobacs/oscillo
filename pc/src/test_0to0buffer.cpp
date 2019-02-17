@@ -2,14 +2,6 @@
 
 #include <csimpTTY.h>
 
-class tty0to0 : public csimpTTY
-{
-public:
-	tty0to0(){}
-	~tty0to0(){}
-
-};
-
 int keepRunning = 1;
 
 void intHandler(int dummy){
@@ -18,13 +10,13 @@ void intHandler(int dummy){
 
 int main(int argc, char **argv)
 {
-printf("\n Testing ctty class, print info about recieved byte vectors from /dev/ttyACM0. \n Press any key to continoue...\n");
+printf("\n Usage: COMMAND /dev/ttyACM1 \n Testing ctty class, print info about recieved byte vectors from /dev/ttyACM0. \n Press any key to continue...\n");
 getchar();
 
 
-tty0to0 ctty;
+csimpTTY_buffered ctty;
 
-if(ctty.init(B115200, 2000, "/dev/ttyACM0"))
+if(ctty.init(B115200, argc > 1 ? argv[1] : "/dev/ttyACM0"))
 {
 	while(keepRunning)
 	{
@@ -35,7 +27,7 @@ if(ctty.init(B115200, 2000, "/dev/ttyACM0"))
 			ctty.print();
 		}
 	}//while
-}else printf("\n Got %d bytes\n", ctty.readin());
+}else printf("Serial error");
 
 return 0;
 }

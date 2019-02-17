@@ -9,7 +9,7 @@ target_link_libraries(csimpsdl ${SDL2_LIBRARY})
 #${SDL2_LIBRARY})
 
 add_library(csimptty csimpTTY.cpp)
-target_link_libraries(csimptty)
+target_link_libraries(csimptty csimplog)
 
 add_library(liblog liblog.cpp)
 target_link_libraries(liblog)

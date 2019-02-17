@@ -7,37 +7,29 @@ teszteli a csimpTTY osztályt: az usb soros portról ("/dev/ttyACM0") olvassa be
 #include <csimpTTY.h>
 #include <ncurses.h>
 
-class tty0to0 : public csimpTTY
-{
-public:
-	tty0to0(){}
-	~tty0to0(){}
-
-};
-
 int keepRunning = 1;
 
 void intHandler(int dummy){
     keepRunning = 0;
 }
 
-
 int main(int argc, char **argv)
 {
-	initscr();			/* Start curses mode 		  */
-	noecho();
-	mvprintw(0,0,"\n Testing ctty class, print info about recieved byte vectors from /dev/ttyACM0. \n Press any key to continoue...\n");
 
-	int maxy, maxx;
-	getmaxyx(stdscr, maxy, maxx);
+	csimpTTY_buffered ctty;
 
-	refresh();			/* Print it on to the real screen */
-	getch();			/* Wait for user input */
-
-	tty0to0 ctty;
-
-	if(ctty.init(B115200, 2000, "/dev/ttyACM0"))
+	if(ctty.init(B115200, argc > 1 ? argv[1] : "/dev/ttyACM0"))
 	{
+		initscr();			/* Start curses mode 		  */
+	//	noecho(); //no printf too
+		mvprintw(0,0,"\n Testing ctty class, print info about recieved byte vectors from /dev/ttyACM0. \n Press any key to continue...\n");
+
+		int maxy, maxx;
+		getmaxyx(stdscr, maxy, maxx);
+
+		refresh();			/* Print it on to the real screen */
+		getch();			/* Wait for user input */
+
 		unsigned char *pc = ctty.get_buffer();
 
 		while(keepRunning)
@@ -60,9 +52,12 @@ int main(int argc, char **argv)
 				refresh();
 			}
 		}//while
-	}else printf("\n Got %d bytes\n", ctty.readin());
 
-	endwin();
+		refresh();			/* Print it on to the real screen */
+		endwin();
+
+	}else printf("Serial init error\n");
+
 
 return 0;
 }
