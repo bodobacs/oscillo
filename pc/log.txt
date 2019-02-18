@@ -1,7 +1,7 @@
-Sun Feb 17 20:04:13 2019
+Mon Feb 18 19:23:01 2019
 
 csimpSDL testing start
 csimpSDL init start
 csimpSDL init success
 flushed
-Closing
+flushed

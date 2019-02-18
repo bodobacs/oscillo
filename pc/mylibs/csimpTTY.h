@@ -40,8 +40,8 @@ public:
 	int readin(void);
 	void print(void);
 	unsigned char *get_buffer(void){ return buffer; }
-	const unsigned int &get_nrecieved(void){ return nrecieved; }
-	const unsigned int &get_buffer_size(void){ return sizeof(buffer); }
+	unsigned int get_nrecieved(void){ return nrecieved; }
+	unsigned int get_buffer_size(void){ return sizeof(buffer); }
 };
 
 class csimpTTY_packet : public csimpTTY

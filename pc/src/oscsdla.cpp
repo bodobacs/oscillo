@@ -13,7 +13,6 @@ teszteli a csimpTTY osztályt: az usb soros portról ("/dev/ttyACM0") olvassa be
 
 csimpTTY_packet ctty;
 sserialpacket paks[max_packet_per_msg];
-int pakstodraw = 0;
 
 clock_t lasttime = 0; //CLOCKS_PER_SEC
 unsigned int vtimer = 0;
@@ -67,42 +66,40 @@ void submain(void)
 
 		if(ctty.readinmessage())
 		{
-			pakstodraw = ctty.get_packet(0).sum;
 /*			for(int i = 0; i < pakstodraw; i++)
 			{
 				std::memcpy(&paks[i], &ctty.get_packet(i), packet_size);
 			}*/
-		}
 
-		//framelimiter
-		clock_t nowtime = clock();
-//		if(0 < pakstodraw && nowtime - lasttime > CLOCKS_PER_SEC * 0.04)
-		{
-			lasttime = nowtime;
-
-			SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 0,0,0,0);
-			SDL_RenderClear(csimpsdl.sdl_ren);
-
-			SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 255,0,0,0);
-			SDL_RenderDrawLine(csimpsdl.sdl_ren, 0,150,1000,150);
-
-			SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 0, 255, 0,0);
-			SDL_RenderDrawLine(csimpsdl.sdl_ren, 0,0, vtimer = vtimer+1 < 1000 ? vtimer + 1 : 0, 0);
-
-			SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 200, 200,200,0);
-
-			int x = 0;
-			for(int i = 0; i < pakstodraw; i++)
+			//framelimiter
+			clock_t nowtime = clock();
+	//		if(0 < pakstodraw && nowtime - lasttime > CLOCKS_PER_SEC * 0.04)
 			{
-				for(int j = 0; j < paks[i].datasize; j++)
-				{
-					SDL_RenderDrawPoint(csimpsdl.sdl_ren, x++, 150 - ctty.get_packet(i).buffer[j]);
-//					SDL_RenderDrawPoint(csimpsdl.sdl_ren, x++, 150 - paks[i].buffer[j]);
-//					csimplog << "point(" << x << "," << y << ")" << std::endl;
-				}
-			}
+				lasttime = nowtime;
 
-			SDL_RenderPresent(csimpsdl.sdl_ren);
+				SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 0,0,0,0);
+				SDL_RenderClear(csimpsdl.sdl_ren);
+
+				SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 255,0,0,0);
+				SDL_RenderDrawLine(csimpsdl.sdl_ren, 0,150,1000,150);
+
+				SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 0, 255, 0,0);
+				SDL_RenderDrawLine(csimpsdl.sdl_ren, 0,0, vtimer = vtimer+1 < 1000 ? vtimer + 1 : 0, 0);
+
+				SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 200, 200,200,0);
+
+				for(int i = 0; i < max_packet_per_msg; i++)
+				{
+					for(int j = 0; j < packet_buffer_size; j++)
+					{
+						SDL_RenderDrawPoint(csimpsdl.sdl_ren, ctty.get_packet(i).h.n_th * packet_buffer_size + j, 290 - ctty.get_packet(i).buffer[j]);
+	//					SDL_RenderDrawPoint(csimpsdl.sdl_ren, x++, 150 - paks[i].buffer[j]);
+	//					csimplog << "point(" << x << "," << y << ")" << std::endl;
+					}
+				}
+
+				SDL_RenderPresent(csimpsdl.sdl_ren);
+			}
 		}
 	}
 }

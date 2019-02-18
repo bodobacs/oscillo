@@ -30,7 +30,7 @@ find_package(SDL2 REQUIRED)
 
 #target_include_directories(ChickenShooter ${SDL2_INCLUDE_DIR})
 
-include_directories(${SDL2_INCLUDE_DIR})
+include_directories(${SDL2_INCLUDE_DIR} ${CMAKE_SOURCE_DIR})
 message(STATUS ${SDL2_INCLUDE_DIR})
 
 include_directories(${CMAKE_SOURCE_DIR}/mylibs)

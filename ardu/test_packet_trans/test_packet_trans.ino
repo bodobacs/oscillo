@@ -21,6 +21,7 @@ void setup()
   {
     for(int j = 0; j < packet_buffer_size; j++)
     {
+      packets[i].h.n_th = i;
       packets[i].buffer[j] = (unsigned char)(i*10);
     }
   }
@@ -35,12 +36,10 @@ int packet_index = 0;
 
 void loop()
 {
-  Serial.write((byte *)&(packets[packet_index]), packet_size);
+    Serial.write((byte *)&(packets[packet_index]), packet_size);
+    packet_index *= ++packet_index < max_packet_per_msg; // XD
 
-  packet_index *= ++packet_index < max_packet_per_msg; // XD
-
-//  Serial.flush();
-    delay(100); //a small pause very needed, to recieve the correct number of bytes
+    delay(50); //a small pause very needed, to recieve the correct number of bytes
 }
 
 //parancskezelés ha kell

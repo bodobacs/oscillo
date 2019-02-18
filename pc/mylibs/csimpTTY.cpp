@@ -128,9 +128,9 @@ bool csimpTTY_packet::readpacket(const int &r)
 	if(packet_size == read(fd, &sp, sizeof(sserialpacket)))
 	{
 		if(
-		sp.k1 == packet_k1 &&
-		sp.k2 == packet_k2 &&
-		sp.k3 == packet_k3 )
+		sp.h.k1 == packet_k1 &&
+		sp.h.k2 == packet_k2 &&
+		sp.h.k3 == packet_k3 )
 		{
 			return true;
 		}else{
@@ -144,7 +144,7 @@ bool csimpTTY_packet::readinmessage(void)
 {
 	if(readpacket(waitingfor_n_th))
 	{
-		if(waitingfor_n_th +1 < packets[waitingfor_n_th].sum)
+		if(get_packet(waitingfor_n_th).h.n_th + 1 < max_packet_per_msg)
 		{
 			waitingfor_n_th++;
 		}else{
@@ -153,7 +153,6 @@ bool csimpTTY_packet::readinmessage(void)
 		}
 	}
 
-	waitingfor_n_th = 0;
 	return false;
 }
 
@@ -161,8 +160,8 @@ bool csimpTTY_packet::printpacket(int n)
 {
 	sserialpacket &sp = packets[n];
 	csimplog << "packet \"" << n << "\" :"<< std::endl;
-	csimplog << "keys k1: " << int(sp.k1) << ", k2: " << int(sp.k2) << ", k3: " << int(sp.k3) << std::endl;
-	csimplog << "sum: " << int(sp.sum) << ", n_th: " << int(sp.n_th) << ", datasize: " << int(sp.datasize) << std::endl;
+	csimplog << "keys k1: " << int(sp.h.k1) << ", k2: " << int(sp.h.k2) << ", k3: " << int(sp.h.k3) << std::endl;
+	csimplog << ", n_th: " << int(sp.h.n_th) << std::endl;
 
 	csimplog << "buffer:" << std::endl;
 	for(int i; i < packet_buffer_size; i++)

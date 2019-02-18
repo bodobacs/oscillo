@@ -9,10 +9,11 @@ teszteli a csimpTTY osztályt: az usb soros portról ("/dev/ttyACM0") olvassa be
 
 int keepRunning = 1;
 
+/*
 void intHandler(int dummy){
     keepRunning = 0;
 }
-
+*/
 int main(int argc, char **argv)
 {
 
