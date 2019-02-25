@@ -15,8 +15,9 @@ public:
 	~csimpLog();
 
 	void logSDLerror(void);
-	void logtime(void);
 };
+
+std::ostream &time(std::ostream &); //full time/date stamp
 
 extern csimpLog csimplog;
 

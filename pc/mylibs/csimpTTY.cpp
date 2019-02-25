@@ -26,8 +26,11 @@ csimpTTY::~csimpTTY()
 bool csimpTTY::init(unsigned int baud, const std::string portname)
 {
 	fd = open(portname.c_str(), O_RDWR | O_NOCTTY | O_SYNC);// | O_NONBLOCK);
-	
-	if(fd >= 0 && set_interface_attribs (fd, baud)) return true;
+
+	if(fd >= 0 && set_interface_attribs (fd, baud)){
+		ttyname = portname;
+		return true;
+	}
 	else printf("Failed opening file:\"%s\" - %u:\"%s\"\n", portname.c_str(), errno, strerror (errno));
 
 	return false;
@@ -41,8 +44,8 @@ bool csimpTTY::set_interface_attribs(int fd, int baud)
 
         if(!tcgetattr (fd, &tty) && !tcgetattr (fd, &oldtty))
         {
-			tty.c_cc[VMIN]  = 255; //this c_cc is a fing unsigned char so packet size cannot be more than 255
-			tty.c_cc[VTIME] = 0;   //this two line: until 255 byte recieved, blocks read(), no time limit
+			tty.c_cc[VMIN]  = 255; //this c_cc is an unsigned char so packet size cannot be more than 255
+			tty.c_cc[VTIME] = 5;   //= 500ms :until 255 byte recieved or 500ms passed blocks read(), no time limit
 
 			//INPUT flags
 			tty.c_iflag &= ~(BRKINT | IGNBRK | PARMRK | INPCK
@@ -68,7 +71,7 @@ bool csimpTTY::set_interface_attribs(int fd, int baud)
 				{
 					if(-1 != tcsetattr(fd, TCSANOW, &tty))
 					{
-//						tcflush(fd, TCIOFLUSH); //clear buffers, NO EFFECT maybe buffered data on arduino side?
+						tcflush(fd, TCIOFLUSH); //clear buffers, NO EFFECT maybe buffered data on arduino side?
 						return true;
 					}else printf("tcsetattr %d", errno);
 				}else printf("tcflush %d", errno);
@@ -132,11 +135,12 @@ bool csimpTTY_packet::readpacket(const int &r)
 		sp.h.k2 == packet_k2 &&
 		sp.h.k3 == packet_k3 )
 		{
+			collect_packetdata(sp);
 			return true;
 		}else{
 			flush();
 		}
-	}
+	}else waitingfor_n_th = 0;
 	return false;
 }
 
@@ -149,11 +153,29 @@ bool csimpTTY_packet::readinmessage(void)
 			waitingfor_n_th++;
 		}else{
 			waitingfor_n_th = 0;
+			++dg_msgs;
 			return true;
 		}
 	}
 
 	return false;
+}
+
+void csimpTTY_packet::collect_packetdata(const sserialpacket &sp)
+{
+	dg_last_command = sp.h.last_command;
+	dg_triggered_packets += (sp.h.flags & FLAG_TRIGGERED) ? 1 : 0;
+	++dg_packets;
+}
+
+void csimpTTY_packet::print_summary(void)
+{
+	csimplog << "-- Diagnostics --" << std::endl;
+	csimplog << "Recieved packets: " << dg_packets << std::endl;
+	csimplog << "Recieved messages: " << dg_msgs << std::endl;
+	csimplog << "Flushed: " << dg_flushed << " times" << std::endl;
+	csimplog << "Triggered packets: " << dg_triggered_packets << std::endl;
+	csimplog << "Last command: " << (int)dg_last_command << std::endl << "------" << std::endl;
 }
 
 bool csimpTTY_packet::printpacket(int n)
@@ -185,5 +207,10 @@ void csimpTTY_packet::flush(void)
 			cnt--
 	);
 
-	csimplog << "flushed" << std::endl;
+	++dg_flushed;
+}
+
+void csimpTTY_packet::send_command(sscommandpacket &ssc)
+{
+	write(fd, (unsigned char *)&ssc, sizeof(sscommandpacket));
 }

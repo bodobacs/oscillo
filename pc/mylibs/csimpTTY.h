@@ -14,10 +14,11 @@ protected:
 	bool set_interface_attribs (int fd, int speed);
 	void set_blocking (int fd, int should_block);
 
+	std::string ttyname;
 public:
 	csimpTTY();
 	~csimpTTY();
-	
+
 /* BAUD rate constants from termios.h
 B0, B50, B75, B110, B134, B150, B200, B300, B600, B1200, B1800, B2400, B4800,
 B9600, B19200, B38400, B57600, B115200, B230400, B460800, B500000, B576000,
@@ -25,6 +26,7 @@ B921600, B1000000, B1152000, B1500000, B2000000, B2500000, B3000000, B3500000, B
 
 	//return 0 error, 1 success
 	bool init(unsigned int baud = B9600,std::string filename = "/dev/ttyACM0");
+	std::string &get_ttynameref(void){return ttyname;}
 };
 
 class csimpTTY_buffered : public csimpTTY
@@ -46,12 +48,21 @@ public:
 
 class csimpTTY_packet : public csimpTTY
 {
+//DIAGNOSTICS
+	unsigned int dg_packets;
+	unsigned int dg_msgs;
+	unsigned int dg_flushed;
+	unsigned int dg_triggered_packets;
+	unsigned char dg_last_command;
+
+	void collect_packetdata(const sserialpacket &sp);
+
 protected:
 	sserialpacket packets[max_packet_per_msg];
 	int waitingfor_n_th = 0;
 
 	bool readpacket(const int &);
-	bool printpacket(int n);
+	bool printpacket(int n); //GARBAGE
 	void flush(void);
 
 public:
@@ -60,4 +71,6 @@ public:
 
 	sserialpacket &get_packet(int i){ return packets[i]; }
 	bool readinmessage(void);
+	void send_command(sscommandpacket &ssc);
+	void print_summary(void);
 };

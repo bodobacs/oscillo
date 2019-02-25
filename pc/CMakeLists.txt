@@ -33,7 +33,7 @@ find_package(SDL2 REQUIRED)
 include_directories(${SDL2_INCLUDE_DIR} ${CMAKE_SOURCE_DIR})
 message(STATUS ${SDL2_INCLUDE_DIR})
 
-include_directories(${CMAKE_SOURCE_DIR}/mylibs)
+include_directories(${CMAKE_SOURCE_DIR}/mylibs ${CMAKE_SOURCE_DIR}/../)
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})

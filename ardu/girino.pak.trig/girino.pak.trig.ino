@@ -1,27 +1,31 @@
 //continous mode pretty good, but there is a mysterious gap in 128 div mode
-
-//TELJESEN A GIRINO KOPPINTASA KIS VALTOZTATÁSOKKAL
-//PROCESSING: Buffer0to0Client
+//GIRINO FORK
 //ADC ANALOG_5 PIN
-//COMPARATOR: negativ SIGNAL AIN1 PIN6; pozitiv (THRESOLD/PWM) 7
-//PWM FREQVENCIA MÉRHETŐ
+//COMPARATOR: "-" SIGNAL AIN1 PIN6; positiv (THRESOLD/PWM) 7
+//PWM working
+//Trigger?
 
 #include "commonheader.h" //softlink to the real header!
 
-volatile sserialpacketheader pakhead;
+bool newcmd = false;
+sscommandpacket cmdpak;
 
 const int BUFFER_SIZE = packet_buffer_size * max_packet_per_msg;
 volatile unsigned char buff[BUFFER_SIZE];
 
 volatile int buff_pos = 0;
+volatile bool trig_mode = false;
+volatile int adc_counter = -1; //visszaszamlalo; -1 triggerelés kikapcsolva
+volatile int trigged_pos = -1;
 
-volatile int adc_counter = -1; //mennyit mérjen a trigger után; -1 triggerelés kikapcsolva
-volatile int adc_counter_stor = 3*packet_buffer_size; //változtatható legyen a triggerelés utáni hossz
+byte last_command = 0;
 
 ISR(ANALOG_COMP_vect)  //COMPARATOR triggered
 {
-  adc_counter = adc_counter_stor; //yet to read
-  bitClear(ACSR, ACIE); //comparator stop
+  bitClear(ACSR, ACIE); //interrupt off
+
+  adc_counter = max_packet_per_msg*packet_buffer_size/2; //to read after trigger
+  trigged_pos = buff_pos;
 }
 
 ISR(ADC_vect) //a ADC conversion happened
@@ -29,15 +33,17 @@ ISR(ADC_vect) //a ADC conversion happened
   buff[buff_pos] = ADCH;
   buff_pos = (buff_pos + 1) % BUFFER_SIZE;
 
-  if(adc_counter < 0) 
-  {//not triggered mode
+  if(trig_mode)
+  {//triggered mode
+     if(0 < adc_counter) --adc_counter ? : bitClear(ADCSRA, ADIE);
+  }else{//not triggered mode 
     buff_pos ? : bitClear(ADCSRA, ADIE); //ha növelés után megint nulla akkor megáll az ADC
-  }else{ //triggered mode
-    --adc_counter ? : bitClear(ADCSRA, ADIE);
   }
 }
 
-unsigned char glob_ADC_div = 7; // [0-7]
+//set_ADC_div(glob_ADC_div < 7 ? glob_ADC_div++ : 255); //at 4 it hangs
+//set_ADC_div(glob_ADC_div > 4 ? glob_ADC_div-- : 255);
+//unsigned char glob_ADC_div = 7; // [0-7]
 void set_ADC_div(int d)
 {
 // These bits determine the division factor between the system clock
@@ -63,7 +69,6 @@ void set_ADC_div(int d)
     bitSet(ADCSRA,ADPS0); //--> 128
   */
   }
- 
 }
 
 //setup A/D converter
@@ -114,7 +119,7 @@ bitSet(ADMUX, MUX0); //-> ADC5
 
 bitSet(ADCSRA, ADATE); //ADC Auto Trigger Enable
 
-set_ADC_div(5); //ADC clock division
+set_ADC_div(7); //ADC clock division <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ADC clock division
 
 //  ADTS2 ADTS1 ADTS0 Trigger source
 //  0 0 0 Free Running mode
@@ -137,23 +142,30 @@ bitSet(ADCSRA, ADIE); //ADC Interrupt Enable
 //setup Analog Comparator
 void setup_comparator(void)
 {
-//ACSR = Analog Comparator Control and Status Register
-bitClear(ACSR, ACBG); //Analog Comparator Bandgap Select
-bitClear(ACSR, ACD);  //Analog Comparator Disable
-bitClear(ACSR, ACIE); //Analog Comparator Interrupt Enable
-bitClear(ACSR, ACIC);
-
-bitClear(ADCSRB, ACME); // no Analog Comparator Multiplexer Enable --> AIN1 is applied to the negative input of the Analog Comparator
+bitClear(ACSR, ACIE); //comparator interrupt enable
+bitSet(ACSR, ACD);  //Analog Comparator Disable
 
 //disable AIN1 and AIN2 digital buffers for analog use or power save
 bitSet(DIDR1, AIN1D);
 bitSet(DIDR1, AIN0D);
 
+//ACSR = Analog Comparator Control and Status Register
+bitSet(ACSR, ACD);  //Analog Comparator Disable
+bitClear(ACSR, ACIE); //Analog Comparator Interrupt Enable
+bitClear(ACSR, ACBG); //Analog Comparator Bandgap Select
+bitClear(ACSR, ACIC);
+
+bitClear(ADCSRB, ACME); // no Analog Comparator Multiplexer Enable --> AIN1 is applied to the negative input of the Analog Comparator
+
 //Analog Comparator Interrupt Mode Select
 bitSet(ACSR, ACIS1);
 bitSet(ACSR, ACIS0); //-->Rising edge
 
-bitSet(ACSR, ACIE); //comparator interrupt enable
+  if(trig_mode)
+  { //interrupts already disabled
+    bitClear(ACSR, ACD);  //comparator on
+    bitSet(ACSR, ACIE); //comparator interrupt enable
+  }
 }
 
 void initPWM(void)
@@ -240,17 +252,19 @@ void initPWM(void)
   pinMode( 13, OUTPUT );
   pinMode( 3, OUTPUT ); //thresholdPin
 
-  analogWrite( 3, 100 );
+  analogWrite( 3, 100 ); //trigger voltage <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 }
 
 void setup()
 {
   buff_pos = 0;
-  
-//  initPWM();
-//  setup_comparator();
-  setup_ADC();
 
+  initPWM();
+  setup_comparator();
+
+  setup_ADC();
+  
+  Serial.setTimeout(50);
   Serial.begin(115200); //9600 115200 230400, 345600, 460800
   while(!Serial);
 
@@ -260,76 +274,84 @@ volatile int packet_index = 0;
 
 void loop()
 {
-  if(adc_counter < 0) //continous mode
-  {
-    if(buff_pos == 0) //returned to the start time to send data
+    bool send_packet = false;
+
+    sserialpacketheader pakhead;
+    pakhead.n_th = packet_index;
+    pakhead.last_command = last_command;
+
+    if(trig_mode) //triggered mode counted down
     {
-      pakhead.n_th = packet_index;
+      if(adc_counter == 0)
+      {
+        //sending trigger position
+        pakhead.flags = FLAG_TRIGGERED;
+        pakhead.trigged_H = (trigged_pos & 0xff) >> 8;
+        pakhead.trigged_L = trigged_pos & 0xff;
+
+        send_packet = true;
+      }
+    }else{  //continous mode
+      if(buff_pos == 0)
+      {
+        pakhead.trigged_H = pakhead.trigged_L = pakhead.flags = 0;
+        send_packet = true; //returned to the start time to send data
+      }
+    }//continous mode
+
+    if(send_packet)
+    {
       Serial.write((byte *)&pakhead, sizeof(sserialpacketheader));
 
       int packet_start = packet_index * packet_buffer_size;
       Serial.write((byte *)&(buff[packet_start]), packet_buffer_size);
 
-      delay(20); //a small pause very needed, to recieve the correct number of bytes
-      
+//      delay(20); //a small pause needed, to distinct packets
+
       if(++packet_index == max_packet_per_msg)
       {
         packet_index = 0;
-  
+
+        if(newcmd) docommand();
+
         //reenable interrupts
-        bitSet(ADCSRA, ADIE); //enable ADC interrupts vagy ? bitSet(ADCSRA, ADEN); //ON ADC
-      }
-    }//continous mode
-
-  }else{//triggered mode
-
-  /*
-        pakhead.n_th = packet_index;
-        Serial.write((byte *)&pakhead, sizeof(sserialpacketheader));
-  
-        int packet_start = buff_pos + packet_index * packet_buffer_size;
-        if(packet_start + packet_buffer_size < BUFFER_SIZE)
+        bitSet(ADCSRA, ADIE); //ON ADC
+        if(trig_mode)
         {
-          Serial.write((byte *)&(buff[packet_start]), packet_buffer_size);
+          adc_counter = -1;
+
+          delay(500);
+          bitSet(ACSR, ACIE); //comparator interrupt enable
         }else{
-          Serial.write((byte *)&buff[packet_start], BUFFER_SIZE - packet_start);
-          Serial.write((byte *)&buff[0], packet_start + packet_buffer_size - BUFFER_SIZE);
+          delay(10);
         }
-  
-        delay(20); //a small pause very needed, to recieve the correct number of bytes
-        
-        if(++packet_index == max_packet_per_msg)
-        {
-          packet_index = 0;
-    
-  //        delay(50);
-    
-          //reenable interrupts
-          bitSet(ADCSRA, ADIE); //enable ADC interrupts vagy ? bitSet(ADCSRA, ADEN); //ON ADC
-  
-  */    
-  }
-  
+      }
+    }
 }//loop
 
-//parancskezelés ha kell
+void docommand(void)
+{
+  newcmd = false;
+  switch (last_command = cmdpak.command)
+  {
+    case c_toggle_triggered:
+      trig_mode = !trig_mode;
+      if(trig_mode) bitClear(ACSR, ACD);  //comparator on
+      else bitSet(ACSR, ACD);  //comparator off
+    break;
+
+    case c_set_trig_level: //new trigger level
+      analogWrite( 3, cmdpak.data );
+    break;
+
+  }//switch
+}
+
+//commands in
 void serialEvent()
 {
-  while (Serial.available())
-  {
-    char command = (char)Serial.read();
-      switch (command)
-      {
-        case 'D':
-          set_ADC_div(glob_ADC_div < 7 ? glob_ADC_div++ : 255);
-        break;
-
-        case 'd':
-          set_ADC_div(glob_ADC_div > 4 ? glob_ADC_div-- : 255);
-        break;
-
-        default:
-          continue;
-      }//switch
-  }//while
+  int r = Serial.available();
+  if(r / sizeof(sscommandpacket) && sizeof(sscommandpacket) == Serial.readBytes((unsigned char *)&cmdpak, sizeof(sscommandpacket)))
+    newcmd = true;
+  else Serial.read();
 }

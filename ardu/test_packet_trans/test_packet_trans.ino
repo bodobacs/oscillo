@@ -1,16 +1,6 @@
-//packet-es megoldas tesztelése
+//Sends packets to pc. Data just bytes 0-4.
 
 #include "commonheader.h" //softlink to the real header!
-
-//#define DEBUG
-
-#ifdef DEBUG
-#define DLOG(message) Serial.println(message);
-#define DLOG2(m1, m2) Serial.print(m1); Serial.println(m2);
-#else
-#define DLOG(message)
-#define DLOG2(m1, m2)
-#endif
 
 volatile sserialpacket packets[max_packet_per_msg];
 
@@ -28,8 +18,6 @@ void setup()
 
   Serial.begin(115200); //9600 115200 230400, 345600, 460800
   while(!Serial);
-
-  DLOG("Setup done.");
 }
 
 int packet_index = 0;

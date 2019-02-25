@@ -12,7 +12,7 @@ csimpLog::csimpLog() : std::ofstream("log.txt", std::ofstream::out)
 {
 	if(std::ofstream::is_open())
 	{
-		logtime();
+		(*this) << time << std::endl;
 	}else{
 		std::cout << "csimpLog initialization failed." << std::endl;
 	}
@@ -32,8 +32,9 @@ void csimpLog::logSDLerror(void)
 	(*this) << " SDL_Init Error: " << SDL_GetError() << std::endl;
 }
 
-void csimpLog::logtime(void)
+std::ostream &time(std::ostream &ref)
 {
 	std::time_t timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-	(*this) << std::ctime(&timenow) << std::endl;
+	ref << std::ctime(&timenow);
+	return ref;
 }

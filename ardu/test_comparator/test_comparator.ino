@@ -1,40 +1,16 @@
-//continous mode pretty good, but there is a mysterious gap in 128 div mode
+//Comparator test
 
-//TELJESEN A GIRINO KOPPINTASA KIS VALTOZTATÁSOKKAL
-//PROCESSING: Buffer0to0Client
-//ADC ANALOG_5 PIN
-//COMPARATOR: negativ SIGNAL AIN1 PIN6; pozitiv (THRESOLD/PWM) 7
-//PWM FREQVENCIA MÉRHETŐ
-
-#include "commonheader.h" //softlink to the real header!
-
-volatile sserialpacketheader pakhead;
-
-const int BUFFER_SIZE = packet_buffer_size * max_packet_per_msg;
-volatile unsigned char buff[BUFFER_SIZE];
-
-volatile int buff_pos = 0;
-
-volatile int adc_counter = -1; //mennyit mérjen a trigger után; -1 triggerelés kikapcsolva
-volatile int adc_counter_stor = 3*packet_buffer_size; //változtatható legyen a triggerelés utáni hossz
+volatile int comparator_triggered = 0;
+volatile bool change = false;
 
 ISR(ANALOG_COMP_vect)  //COMPARATOR triggered
 {
-  adc_counter = adc_counter_stor; //yet to read
-  bitClear(ACSR, ACIE); //comparator stop
+  change = true;
+  comparator_triggered++;
 }
 
 ISR(ADC_vect) //a ADC conversion happened
 {
-  buff[buff_pos] = ADCH;
-  buff_pos = (buff_pos + 1) % BUFFER_SIZE;
-
-  if(adc_counter < 0) 
-  {//not triggered mode
-    buff_pos ? : bitClear(ADCSRA, ADIE); //ha növelés után megint nulla akkor megáll az ADC
-  }else{ //triggered mode
-    --adc_counter ? : bitClear(ADCSRA, ADIE);
-  }
 }
 
 unsigned char glob_ADC_div = 7; // [0-7]
@@ -137,22 +113,23 @@ bitSet(ADCSRA, ADIE); //ADC Interrupt Enable
 //setup Analog Comparator
 void setup_comparator(void)
 {
-//ACSR = Analog Comparator Control and Status Register
-bitClear(ACSR, ACBG); //Analog Comparator Bandgap Select
-bitClear(ACSR, ACD);  //Analog Comparator Disable
-bitClear(ACSR, ACIE); //Analog Comparator Interrupt Enable
-bitClear(ACSR, ACIC);
-
-bitClear(ADCSRB, ACME); // no Analog Comparator Multiplexer Enable --> AIN1 is applied to the negative input of the Analog Comparator
-
 //disable AIN1 and AIN2 digital buffers for analog use or power save
 bitSet(DIDR1, AIN1D);
 bitSet(DIDR1, AIN0D);
+
+//ACSR = Analog Comparator Control and Status Register
+bitSet(ACSR, ACD);  //Analog Comparator Disable
+bitClear(ACSR, ACIE); //Analog Comparator Interrupt Enable
+bitClear(ACSR, ACBG); //Analog Comparator Bandgap Select
+bitClear(ACSR, ACIC);
+
+bitClear(ADCSRB, ACME); // no Analog Comparator Multiplexer Enable --> AIN1 is applied to the negative input of the Analog Comparator
 
 //Analog Comparator Interrupt Mode Select
 bitSet(ACSR, ACIS1);
 bitSet(ACSR, ACIS0); //-->Rising edge
 
+bitClear(ACSR, ACD);  //Analog Comparator Disable
 bitSet(ACSR, ACIE); //comparator interrupt enable
 }
 
@@ -240,96 +217,30 @@ void initPWM(void)
   pinMode( 13, OUTPUT );
   pinMode( 3, OUTPUT ); //thresholdPin
 
-  analogWrite( 3, 100 );
+  analogWrite( 3, 200 ); //trigger voltage
+  //AIN0 = D6 pos
+  //AIN1 = D7 neg
 }
 
 void setup()
 {
-  buff_pos = 0;
-  
-//  initPWM();
-//  setup_comparator();
-  setup_ADC();
-
   Serial.begin(115200); //9600 115200 230400, 345600, 460800
   while(!Serial);
 
+  setup_comparator();
+  
+  Serial.write("Setup ready.\n");
 }
-
-volatile int packet_index = 0;
 
 void loop()
 {
-  if(adc_counter < 0) //continous mode
+  if(change)
   {
-    if(buff_pos == 0) //returned to the start time to send data
-    {
-      pakhead.n_th = packet_index;
-      Serial.write((byte *)&pakhead, sizeof(sserialpacketheader));
-
-      int packet_start = packet_index * packet_buffer_size;
-      Serial.write((byte *)&(buff[packet_start]), packet_buffer_size);
-
-      delay(20); //a small pause very needed, to recieve the correct number of bytes
-      
-      if(++packet_index == max_packet_per_msg)
-      {
-        packet_index = 0;
-  
-        //reenable interrupts
-        bitSet(ADCSRA, ADIE); //enable ADC interrupts vagy ? bitSet(ADCSRA, ADEN); //ON ADC
-      }
-    }//continous mode
-
-  }else{//triggered mode
-
-  /*
-        pakhead.n_th = packet_index;
-        Serial.write((byte *)&pakhead, sizeof(sserialpacketheader));
-  
-        int packet_start = buff_pos + packet_index * packet_buffer_size;
-        if(packet_start + packet_buffer_size < BUFFER_SIZE)
-        {
-          Serial.write((byte *)&(buff[packet_start]), packet_buffer_size);
-        }else{
-          Serial.write((byte *)&buff[packet_start], BUFFER_SIZE - packet_start);
-          Serial.write((byte *)&buff[0], packet_start + packet_buffer_size - BUFFER_SIZE);
-        }
-  
-        delay(20); //a small pause very needed, to recieve the correct number of bytes
-        
-        if(++packet_index == max_packet_per_msg)
-        {
-          packet_index = 0;
-    
-  //        delay(50);
-    
-          //reenable interrupts
-          bitSet(ADCSRA, ADIE); //enable ADC interrupts vagy ? bitSet(ADCSRA, ADEN); //ON ADC
-  
-  */    
+    Serial.println(comparator_triggered, DEC);
+    change = false;
   }
-  
 }//loop
 
-//parancskezelés ha kell
 void serialEvent()
 {
-  while (Serial.available())
-  {
-    char command = (char)Serial.read();
-      switch (command)
-      {
-        case 'D':
-          set_ADC_div(glob_ADC_div < 7 ? glob_ADC_div++ : 255);
-        break;
-
-        case 'd':
-          set_ADC_div(glob_ADC_div > 4 ? glob_ADC_div-- : 255);
-        break;
-
-        default:
-          continue;
-      }//switch
-  }//while
 }

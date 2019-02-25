@@ -1,7 +1,0 @@
-Mon Feb 18 19:23:01 2019
-
-csimpSDL testing start
-csimpSDL init start
-csimpSDL init success
-flushed
-flushed
