@@ -17,7 +17,7 @@ const std::string appname("oscsdla");
 csimpTTY_packet ctty;
 sserialpacket paks[max_packet_per_msg];
 
-clock_t lasttime = 0; //CLOCKS_PER_SEC
+//clock_t lasttime = 0; //CLOCKS_PER_SEC
 unsigned int vtimer = 0;
 
 const int width = max_packet_per_msg*packet_buffer_size;
@@ -34,32 +34,24 @@ void intHandler(int dummy){
 inline void draw_continous(void)
 {
 	int zero = height - 5;
-	//framelimiter
-	clock_t nowtime = clock();
-	//		if(0 < pakstodraw && nowtime - lasttime > CLOCKS_PER_SEC * 0.04)
+
+	SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 0,0,0,0);
+	SDL_RenderClear(csimpsdl.sdl_ren);
+
+	SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 255,0,0,0);
+	SDL_RenderDrawLine(csimpsdl.sdl_ren, 0, zero, width, zero);
+
+	SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 0, 255, 255,0);
+	SDL_RenderDrawLine(csimpsdl.sdl_ren, 0,0, vtimer = vtimer+1 < width ? vtimer + 1 : 0, 0);
+
+	SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 200, 200,200,0);
+
+	for(int i = 0; i < max_packet_per_msg; i++)
 	{
-		lasttime = nowtime;
-
-		SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 0,0,0,0);
-		SDL_RenderClear(csimpsdl.sdl_ren);
-
-		SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 255,0,0,0);
-		SDL_RenderDrawLine(csimpsdl.sdl_ren, 0, zero, width, zero);
-
-		SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 0, 255, 255,0);
-		SDL_RenderDrawLine(csimpsdl.sdl_ren, 0,0, vtimer = vtimer+1 < width ? vtimer + 1 : 0, 0);
-
-		SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 200, 200,200,0);
-
-		for(int i = 0; i < max_packet_per_msg; i++)
+		for(int j = 0; j < packet_buffer_size; j++)
 		{
-			for(int j = 0; j < packet_buffer_size; j++)
-			{
-				SDL_RenderDrawPoint(csimpsdl.sdl_ren, ctty.get_packet(i).h.n_th * packet_buffer_size + j, zero - ctty.get_packet(i).buffer[j]);
-			}
+			SDL_RenderDrawPoint(csimpsdl.sdl_ren, ctty.get_packet(i).h.n_th * packet_buffer_size + j, zero - ctty.get_packet(i).buffer[j]);
 		}
-
-		SDL_RenderPresent(csimpsdl.sdl_ren);
 	}
 }
 
@@ -96,8 +88,6 @@ inline void draw_triggered(void)
 		j,
 		zero - ctty.get_packet(i / packet_buffer_size).buffer[i % packet_buffer_size]);
 	}
-
-	SDL_RenderPresent(csimpsdl.sdl_ren);
 }
 
 inline void submain(void)
@@ -187,6 +177,8 @@ inline void submain(void)
 			}else{
 				draw_continous();
 			}
+
+			SDL_RenderPresent(csimpsdl.sdl_ren);
 		}
 	}
 }

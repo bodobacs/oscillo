@@ -25,13 +25,17 @@ csimpTTY::~csimpTTY()
 
 bool csimpTTY::init(unsigned int baud, const std::string portname)
 {
-	fd = open(portname.c_str(), O_RDWR | O_NOCTTY | O_SYNC);// | O_NONBLOCK);
+	if(csimplog.is_open())
+	{
+		fd = open(portname.c_str(), O_RDWR | O_NOCTTY | O_SYNC);// | O_NONBLOCK);
 
-	if(fd >= 0 && set_interface_attribs (fd, baud)){
-		ttyname = portname;
-		return true;
-	}
-	else printf("Failed opening file:\"%s\" - %u:\"%s\"\n", portname.c_str(), errno, strerror (errno));
+		if(fd >= 0 && set_interface_attribs (fd, baud)){
+			ttyname = portname;
+			return true;
+		}else{
+			csimplog << "Cannot open port: \"" << portname.c_str() << "\", errorcode:" << errno << " - " << strerror (errno) << std::endl;
+		}
+	}else printf("\ncsimplog not ready");
 
 	return false;
 }

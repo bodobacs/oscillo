@@ -14,3 +14,5 @@ target_link_libraries(csimptty csimplog)
 add_library(liblog liblog.cpp)
 target_link_libraries(liblog)
 
+add_library(csimpgui csimpGUI.cpp)
+target_link_libraries(csimpgui)

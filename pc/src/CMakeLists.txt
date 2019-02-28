@@ -44,3 +44,8 @@ target_link_libraries(testsdl csimptty csimplog csimpsdl)
 add_executable(oscsdla oscsdla.cpp)
 target_link_libraries(oscsdla csimptty csimplog csimpsdl)
 
+#################### testing gui library ####################
+
+add_executable(testgui testgui.cpp)
+target_link_libraries(testgui csimpgui csimplog csimpsdl)
+
