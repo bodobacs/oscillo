@@ -11,7 +11,6 @@ std::string appname = "test_gui";
 bool drawing = false;
 const SDL_Rect screen = {0, 0, 800, 600};
 
-
 cAllWidgets widgets(screen.w, screen.h);
 
 SDL_Rect rect = {0,0,0,0};
@@ -20,6 +19,8 @@ void init_buttons(void)
 {
 }
 
+
+bool ctrl_pushed = false;
 void submain(void)
 {
 	init_buttons();
@@ -57,14 +58,32 @@ void submain(void)
 						case SDLK_TAB:
 						break;
 
+						case SDLK_LCTRL:
+							csimplog << "CTRL down" << std::endl;
+							 ctrl_pushed = true;
+						break;
+
 						default:
 						break;
 					}//switch2
 					break;
 
+					case SDL_KEYUP:
+					switch(e.key.keysym.sym)
+					{
+						case SDLK_LCTRL:
+							csimplog << "CTRL up" << std::endl;
+							ctrl_pushed = false;
+						break;
+					}//switch3
+					break;
+
 				case SDL_MOUSEBUTTONDOWN:
+					if(ctrl_pushed)
+					{
 						sx0 = e.button.x;
 						sy0 = e.button.y;
+					}
 					break;
 
 				case SDL_MOUSEMOTION:
@@ -73,6 +92,7 @@ void submain(void)
 					break;
 					
 				case SDL_MOUSEBUTTONUP:
+					if(ctrl_pushed)
 					{
 						cButton b;
 						b.r.x = sx0 < e.button.x ? sx0 : e.button.x;

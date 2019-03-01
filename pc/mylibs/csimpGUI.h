@@ -57,11 +57,12 @@ protected:
 public:
 	cAllWidgets(const int &w, const int &h);
 
-	void add_button(const cButton &button_to_store);
+	int add_button(const cButton &button_to_store);
 	void drawall(void);
 	void printall(void);
 
 //	cButton &get_button(const int &index);
 //	int get(const int &x, const int &y){}
-	bool click(const int &x, const int &y);
+	const int &get_selected(void){ return selected; }
+	bool hoover(const int &x, const int &y);
 };

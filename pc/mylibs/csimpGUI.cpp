@@ -8,11 +8,15 @@ cAllWidgets::cAllWidgets(const int &w, const int &h) : quad(nullptr, w/2, h/2)
 	selected = -1;
 }
 
-void cAllWidgets::add_button(const cButton &b)
+int cAllWidgets::add_button(const cButton &b)
 {
+//try BLOCK !!!!!!!!!!!!!!!
+
 	allbuttons.push_back(b);
 //	csimplog << "button " << v.size() << ": x: " << b.r.x << ", y: " << b.r.y << ", w: " << b.r.w << ", h: " << b.r.h << std::endl;
 	quad.add(allbuttons.size()-1, allbuttons);
+
+	return allbuttons.size()-1;
 }
 
 void cAllWidgets::drawall(void)
@@ -34,7 +38,7 @@ void cAllWidgets::drawall(void)
 	quad.draw();
 }
 
-bool cAllWidgets::click(const int &x, const int &y)
+bool cAllWidgets::hoover(const int &x, const int &y)
 {
 	selected = quad.get(x, y, allbuttons);
 	csimplog << selected << std::endl;
