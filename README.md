@@ -22,6 +22,7 @@ PC side
   - t -> toggle trigger - continous mode
   - PgUP/PgDown -> increase/decrease trigger level
   - x -> forces an output, if triggered mode stalled because there is no high enough signal
+  - TAB prints statistics to terminal
   - ESC (ctrl-C in terminal sometimes saves the situation) exit
 
 
