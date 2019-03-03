@@ -14,6 +14,7 @@ Hardware
   Using girino shield https://www.instructables.com/id/Girino-Fast-Arduino-Oscilloscope/
   But continous mode working with just plugging a signal in A5.
 Arduino side
+  Heavily changed Girino project files.
   ardu/girino.pak.trig
 PC side
   oscsdla [for example /dev/ttyACM0]
