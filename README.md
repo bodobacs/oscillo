@@ -5,8 +5,8 @@ Arduino-pc SDL oscilloscope.
 Do not bother for now. I frequently edit this project, not sure about success.
 
 Developed and tested on linux 64 bit.
-Build with cmake (pc/b.sh)
-Dependencies: SDL2, modified SDL2 modules are copied inside
+Build with cmake (pc/b.sh).
+Dependencies: SDL2, modified SDL2 modules are copied inside.
 For serial connection it uses unistd, termios, read-write(fd, ... I have not got windows in my mind, but I tend to use standard things.
 
 Latest working outputs
