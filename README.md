@@ -11,32 +11,32 @@ For serial connection it uses unistd, termios, read-write(fd, ... I have not got
 
 Latest working outputs
 Hardware
+  - Using girino shield https://www.instructables.com/id/Girino-Fast-Arduino-Oscilloscope/
+  - But continous mode working with just plugging a signal in A5.
+  
+Arduino side (heavily changed Girino project files)
+  - ardu/girino.pak.trig
 
-  Using girino shield https://www.instructables.com/id/Girino-Fast-Arduino-Oscilloscope/
-  But continous mode working with just plugging a signal in A5.
-  
-Arduino side
-  Heavily changed Girino project files.
-  ardu/girino.pak.trig
-  
 PC side
-  oscsdla [for example /dev/ttyACM0]
-  t -> toggle trigger - continous mode
-  PgUP/PgDown -> increase/decrease trigger level
-  x -> forces an output, if triggered mode stalled because there is no high enough signal
-  ESC (ctrl-C in terminal sometimes saves the situation) exit
+  - oscsdla [for example /dev/ttyACM0]
+  - t -> toggle trigger - continous mode
+  - PgUP/PgDown -> increase/decrease trigger level
+  - x -> forces an output, if triggered mode stalled because there is no high enough signal
+  - ESC (ctrl-C in terminal sometimes saves the situation) exit
 
 
 Testing outputs
 
 PC:
-  test_0to0buffer spits out incoming serial data
-  test_0to0ncurses its a table shows packets one after another, if incoming data is correct,
-    the first few bytes are the same (packetformat in commonheader.h)
+  - test_0to0buffer spits out incoming serial data
+  - test_0to0ncurses its a table shows packets one after another, if incoming data is correct,
+  - the first few bytes are the same (packetformat in commonheader.h)
 arduino:
-  test_comparator just counts interrupts happened spits it out to serial monitor
+  - test_comparator just counts interrupts happened spits it out to serial monitor
 
 The rest are steps in development, small trials.
+
+
 
 Copyright (c) <2019 Zoltan Fabian>
 
