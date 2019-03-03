@@ -38,7 +38,7 @@ arduino:
 
 The rest are steps in development, small trials.
 
-Copyright (c) <2019> <Zoltan Fabian>
+Copyright (c) <2019 Zoltan Fabian>
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
