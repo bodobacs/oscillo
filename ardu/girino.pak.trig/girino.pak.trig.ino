@@ -1,13 +1,11 @@
-//continous mode pretty good, but there is a mysterious gap in 128 div mode
-//GIRINO FORK
+//continous mode pretty good, triggered mode also works
+//GIRINO FORK: https://www.instructables.com/id/Girino-Fast-Arduino-Oscilloscope/
+
 //ADC ANALOG_5 PIN
 //COMPARATOR: "-" SIGNAL AIN1 PIN6; positiv (THRESOLD/PWM) 7
-//PWM working
-//Trigger?
 
 #include "commonheader.h" //softlink to the real header!
 
-volatile bool newcmd = false;
 sscommandpacket cmdpak;
 
 const int BUFFER_SIZE = packet_buffer_size * max_packet_per_msg;
@@ -344,7 +342,6 @@ void loop()
 
 inline void docommand(void)
 {
-  newcmd = false;
   switch (cmdpak.command)
   {
     case c_toggle_triggered:
