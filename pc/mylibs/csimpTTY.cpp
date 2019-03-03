@@ -8,6 +8,7 @@
 #include <string.h>
 #include <csimpTTY.h>
 #include <csimpLog.h>
+#include <sys/ioctl.h>
 
 csimpTTY::csimpTTY()
 {
@@ -49,7 +50,7 @@ bool csimpTTY::set_interface_attribs(int fd, int baud)
         if(!tcgetattr (fd, &tty) && !tcgetattr (fd, &oldtty))
         {
 			tty.c_cc[VMIN]  = 255; //this c_cc is an unsigned char so packet size cannot be more than 255
-			tty.c_cc[VTIME] = 5;   //= 500ms :until 255 byte recieved or 500ms passed blocks read(), no time limit
+			tty.c_cc[VTIME] = 0;   //= VTIME * 100ms :until 255 byte recieved or ms passed blocks read(), no time limit
 
 			//INPUT flags
 			tty.c_iflag &= ~(BRKINT | IGNBRK | PARMRK | INPCK
@@ -103,7 +104,6 @@ int csimpTTY_buffered::readin(void)
 	return (nrecieved = read(fd, buffer, sizeof(buffer)));
 }
 
-
 void csimpTTY_buffered::print(void)
 {
 	for(int i = 0; i<nrecieved; i++)
@@ -113,7 +113,6 @@ void csimpTTY_buffered::print(void)
 		if(!(i % 20)) printf("\n");
 	}
 }
-
 
 /*
  ************************ csimpTTY_packet ****************************
@@ -132,19 +131,27 @@ bool csimpTTY_packet::readpacket(const int &r)
 {
 	sserialpacket &sp = packets[r];
 
-	if(packet_size == read(fd, &sp, sizeof(sserialpacket)))
+	int waiting = 0;
+	ioctl(fd, FIONREAD, &waiting);
+	
+//	csimplog << "waiting: " << waiting << std::endl;
+	
+	if(packet_size <= waiting)
 	{
-		if(
-		sp.h.k1 == packet_k1 &&
-		sp.h.k2 == packet_k2 &&
-		sp.h.k3 == packet_k3 )
+		if(packet_size == read(fd, &sp, sizeof(sserialpacket)))
 		{
-			collect_packetdata(sp);
-			return true;
-		}else{
-			flush();
-		}
-	}else waitingfor_n_th = 0;
+			if(
+			sp.h.k1 == packet_k1 &&
+			sp.h.k2 == packet_k2 &&
+			sp.h.k3 == packet_k3 )
+			{
+				collect_packetdata(sp);
+				return true;
+			}else{
+				flush();
+			}
+		}else waitingfor_n_th = 0;
+	}
 	return false;
 }
 
@@ -168,6 +175,7 @@ bool csimpTTY_packet::readinmessage(void)
 void csimpTTY_packet::collect_packetdata(const sserialpacket &sp)
 {
 	dg_last_command = sp.h.last_command;
+	dg_last_command_data = sp.h.last_command_data;
 	dg_triggered_packets += (sp.h.flags & FLAG_TRIGGERED) ? 1 : 0;
 	++dg_packets;
 }
@@ -179,7 +187,8 @@ void csimpTTY_packet::print_summary(void)
 	csimplog << "Recieved messages: " << dg_msgs << std::endl;
 	csimplog << "Flushed: " << dg_flushed << " times" << std::endl;
 	csimplog << "Triggered packets: " << dg_triggered_packets << std::endl;
-	csimplog << "Last command: " << (int)dg_last_command << std::endl << "------" << std::endl;
+	csimplog << "Last command: " << (int)dg_last_command << std::endl;
+	csimplog << "Last command data: " << (int)dg_last_command_data << std::endl << "------" << std::endl;
 }
 
 bool csimpTTY_packet::printpacket(int n)

@@ -42,6 +42,7 @@ struct sserialpacket
 
 const unsigned char c_toggle_triggered = 1;
 const unsigned char c_set_trig_level = 2;
+const unsigned char c_send_a_shot = 3;
 
 struct sscommandpacket
 {

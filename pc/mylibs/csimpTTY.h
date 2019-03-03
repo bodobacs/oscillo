@@ -54,6 +54,7 @@ class csimpTTY_packet : public csimpTTY
 	unsigned int dg_flushed;
 	unsigned int dg_triggered_packets;
 	unsigned char dg_last_command;
+	unsigned char dg_last_command_data;
 
 	void collect_packetdata(const sserialpacket &sp);
 

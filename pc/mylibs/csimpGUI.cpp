@@ -8,7 +8,7 @@ cAllWidgets::cAllWidgets(const int &w, const int &h) : quad(nullptr, w/2, h/2)
 	selected = -1;
 }
 
-int cAllWidgets::add_button(const cButton &b)
+int cAllWidgets::add_button(const cintRect &b)
 {
 //try BLOCK !!!!!!!!!!!!!!!
 
@@ -24,7 +24,7 @@ void cAllWidgets::drawall(void)
 	SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 200,150,0,0);
 
 	int i = 0;
-	for(std::vector<cButton>::iterator itr = allbuttons.begin(); itr != allbuttons.end(); itr++, i++)
+	for(std::vector<cintRect>::iterator itr = allbuttons.begin(); itr != allbuttons.end(); itr++, i++)
 	{
 		if(i == selected)
 		{
@@ -38,12 +38,10 @@ void cAllWidgets::drawall(void)
 	quad.draw();
 }
 
-bool cAllWidgets::hoover(const int &x, const int &y)
+void cAllWidgets::hoover(const int &x, const int &y)
 {
 	selected = quad.get(x, y, allbuttons);
-	csimplog << selected << std::endl;
-	if(-1 != selected) return true;
-	return false;
+//	csimplog << selected << std::endl;
 }
 
 void cAllWidgets::printall(void)
@@ -81,7 +79,7 @@ cQuad::~cQuad()
 }
 
 //locate point in quadrant
-int cQuad::get(const int &x, const int &y, const std::vector<cButton> &bv)
+int cQuad::get(const int &x, const int &y, const std::vector<cintRect> &bv)
 {
 	int ret = -1;
 
@@ -113,7 +111,7 @@ int cQuad::get(const int &x, const int &y, const std::vector<cButton> &bv)
 }
 
 //rect is in quadrant, first time need to be allocated
-void cQuad::addtoquadrant(cQuad *&pquad, const int &_x, const int &_y, std::vector<cButton> &bv, const int &ix)
+void cQuad::addtoquadrant(cQuad *&pquad, const int &_x, const int &_y, std::vector<cintRect> &bv, const int &ix)
 {
 	if(nullptr == pquad) pquad = new cQuad(this, _x, _y);
 
@@ -128,7 +126,7 @@ void cQuad::addtoquadrant(cQuad *&pquad, const int &_x, const int &_y, std::vect
 
 //do not just store distribute
 //locate rectangle in quadrant
-bool cQuad::addchild(const int &ix, std::vector<cButton> &bv)
+bool cQuad::addchild(const int &ix, std::vector<cintRect> &bv)
 {
 	if(x0 <= bv[ix].r.x)
 	{//RIGHT
@@ -161,7 +159,7 @@ bool cQuad::addchild(const int &ix, std::vector<cButton> &bv)
 	return false;
 }
 
-void cQuad::add(const int &ix, std::vector<cButton> &bv)
+void cQuad::add(const int &ix, std::vector<cintRect> &bv)
 {
 	indexes.push_back(ix);
 

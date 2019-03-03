@@ -22,7 +22,7 @@ unsigned int vtimer = 0;
 
 const int width = max_packet_per_msg*packet_buffer_size;
 const int height = 300;
-unsigned char trigger_level = 255;
+unsigned char trigger_level = 151;
 
 
 int keepRunning = 1;
@@ -43,6 +43,14 @@ inline void draw_continous(void)
 
 	SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 0, 255, 255,0);
 	SDL_RenderDrawLine(csimpsdl.sdl_ren, 0,0, vtimer = vtimer+1 < width ? vtimer + 1 : 0, 0);
+
+
+	if(ctty.get_packet(0).h.last_command == c_set_trig_level)
+	{
+		int t = ctty.get_packet(0).h.last_command_data;
+		SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 0xBB, 0, 0xDD, 0);
+		SDL_RenderDrawLine(csimpsdl.sdl_ren, 0, zero - t, width, zero - t);
+	}
 
 	SDL_SetRenderDrawColor(csimpsdl.sdl_ren, 200, 200,200,0);
 
@@ -142,10 +150,10 @@ inline void submain(void)
 							}
 							break;
 
-							case SDLK_x: //dummy
+							case SDLK_x:
 							{
 								sscommandpacket s;
-								s.command = 5;
+								s.command = c_send_a_shot;
 								ctty.send_command(s);
 							}
 							break;
@@ -169,6 +177,7 @@ inline void submain(void)
 			}
 		}
 
+
 		if(ctty.readinmessage())
 		{
 			if(ctty.get_packet(0).h.flags & FLAG_TRIGGERED)
@@ -177,9 +186,9 @@ inline void submain(void)
 			}else{
 				draw_continous();
 			}
-
-			SDL_RenderPresent(csimpsdl.sdl_ren);
 		}
+
+		SDL_RenderPresent(csimpsdl.sdl_ren);
 	}
 }
 

@@ -7,25 +7,26 @@
 
 #include "commonheader.h" //softlink to the real header!
 
-bool newcmd = false;
+volatile bool newcmd = false;
 sscommandpacket cmdpak;
 
 const int BUFFER_SIZE = packet_buffer_size * max_packet_per_msg;
 volatile unsigned char buff[BUFFER_SIZE];
 
 volatile int buff_pos = 0;
-volatile bool trig_mode = false;
-volatile int adc_counter = -1; //visszaszamlalo; -1 triggerelés kikapcsolva
-volatile int trigged_pos = -1;
+volatile bool trig_mode = true;
+volatile int trigged_end = -1;
+volatile bool sending = false;
 
-byte last_command = 0;
+byte trigger_level = 100;
 
 ISR(ANALOG_COMP_vect)  //COMPARATOR triggered
 {
-  bitClear(ACSR, ACIE); //interrupt off
-
-  adc_counter = max_packet_per_msg*packet_buffer_size/2; //to read after trigger
-  trigged_pos = buff_pos;
+  if(0 > trigged_end)
+  {
+    bitClear(ACSR, ACIE); //interrupt off
+    trigged_end = (buff_pos + BUFFER_SIZE/2)%BUFFER_SIZE;
+  }
 }
 
 ISR(ADC_vect) //a ADC conversion happened
@@ -35,9 +36,9 @@ ISR(ADC_vect) //a ADC conversion happened
 
   if(trig_mode)
   {//triggered mode
-     if(0 < adc_counter) --adc_counter ? : bitClear(ADCSRA, ADIE);
-  }else{//not triggered mode 
-    buff_pos ? : bitClear(ADCSRA, ADIE); //ha növelés után megint nulla akkor megáll az ADC
+     if(trigged_end == buff_pos){ bitClear(ADCSRA, ADIE); sending = true;}
+  }else{
+    if(!buff_pos){ bitClear(ADCSRA, ADIE); sending = true; } //ha növelés után megint nulla akkor megáll az ADC
   }
 }
 
@@ -140,7 +141,7 @@ bitSet(ADCSRA, ADIE); //ADC Interrupt Enable
 }
 
 //setup Analog Comparator
-void setup_comparator(void)
+void comparator_setup(void)
 {
 bitClear(ACSR, ACIE); //comparator interrupt enable
 bitSet(ACSR, ACD);  //Analog Comparator Disable
@@ -161,11 +162,8 @@ bitClear(ADCSRB, ACME); // no Analog Comparator Multiplexer Enable --> AIN1 is a
 bitSet(ACSR, ACIS1);
 bitSet(ACSR, ACIS0); //-->Rising edge
 
-  if(trig_mode)
-  { //interrupts already disabled
-    bitClear(ACSR, ACD);  //comparator on
-    bitSet(ACSR, ACIE); //comparator interrupt enable
-  }
+//setup done, not started
+bitClear(ACSR, ACD);  //Analog Comparator Disable
 }
 
 void initPWM(void)
@@ -252,106 +250,127 @@ void initPWM(void)
   pinMode( 13, OUTPUT );
   pinMode( 3, OUTPUT ); //thresholdPin
 
-  analogWrite( 3, 100 ); //trigger voltage <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  analogWrite( 3, trigger_level ); //trigger voltage <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 }
 
 void setup()
 {
-  buff_pos = 0;
-
-  initPWM();
-  setup_comparator();
-
-  setup_ADC();
-  
   Serial.setTimeout(50);
   Serial.begin(115200); //9600 115200 230400, 345600, 460800
   while(!Serial);
 
+  buff_pos = 0;
+
+  initPWM();
+  comparator_setup();
+
+  if(trig_mode) bitSet(ACSR, ACIE); //comparator interrupt enable
+
+  setup_ADC();
+
 }
 
-volatile int packet_index = 0;
+void triggered_mode(void)
+{
+  for(int packet_index = 0; packet_index < max_packet_per_msg; packet_index++)
+  {
+    sserialpacketheader pakhead;
+    pakhead.n_th = packet_index;
+    pakhead.last_command = cmdpak.command;
+    pakhead.last_command_data = cmdpak.data;
+
+    //sending trigger position
+    pakhead.flags = FLAG_TRIGGERED;
+
+    int trig_pos = (trigged_end + BUFFER_SIZE/2)%BUFFER_SIZE;
+    pakhead.trigged_H = (trig_pos & 0xff) >> 8;
+    pakhead.trigged_L = trig_pos & 0xff;
+
+    Serial.write((byte *)&pakhead, sizeof(sserialpacketheader));
+
+    int packet_start = packet_index * packet_buffer_size;
+    Serial.write((byte *)&(buff[packet_start]), packet_buffer_size);
+
+    delay(20); //a small pause needed, to distinct packets
+
+  }//while
+     trigged_end = -1;
+}
+
+void freerun_mode(void)
+{
+  for(int packet_index = 0; packet_index < max_packet_per_msg; packet_index++)
+  {
+    sserialpacketheader pakhead;
+    pakhead.n_th = packet_index;
+    pakhead.last_command = cmdpak.command;
+    pakhead.last_command_data = cmdpak.data;
+      
+    pakhead.trigged_H = pakhead.trigged_L = pakhead.flags = 0;
+
+    Serial.write((byte *)&pakhead, sizeof(sserialpacketheader));
+
+    int packet_start = packet_index * packet_buffer_size;
+    Serial.write((byte *)&(buff[packet_start]), packet_buffer_size);
+
+    delay(20); //a small pause needed, to distinct packets
+  }
+}
+
+void oneshot_mode(void)
+{
+  
+}
+
+bool toggle_triggered_mode = false;
 
 void loop()
 {
-    bool send_packet = false;
-
-    sserialpacketheader pakhead;
-    pakhead.n_th = packet_index;
-    pakhead.last_command = last_command;
-
-    if(trig_mode) //triggered mode counted down
+    if(sending) //A/D, comparator interrupts already stopped
     {
-      if(adc_counter == 0)
+      sending = false;
+      if(trig_mode) triggered_mode();
+      else freerun_mode();
+
+      //reenable interrupts
+      bitSet(ADCSRA, ADIE); //ON ADC
+      if(trig_mode) //mode maybe changed
       {
-        //sending trigger position
-        pakhead.flags = FLAG_TRIGGERED;
-        pakhead.trigged_H = (trigged_pos & 0xff) >> 8;
-        pakhead.trigged_L = trigged_pos & 0xff;
-
-        send_packet = true;
-      }
-    }else{  //continous mode
-      if(buff_pos == 0)
-      {
-        pakhead.trigged_H = pakhead.trigged_L = pakhead.flags = 0;
-        send_packet = true; //returned to the start time to send data
-      }
-    }//continous mode
-
-    if(send_packet)
-    {
-      Serial.write((byte *)&pakhead, sizeof(sserialpacketheader));
-
-      int packet_start = packet_index * packet_buffer_size;
-      Serial.write((byte *)&(buff[packet_start]), packet_buffer_size);
-
-//      delay(20); //a small pause needed, to distinct packets
-
-      if(++packet_index == max_packet_per_msg)
-      {
-        packet_index = 0;
-
-        if(newcmd) docommand();
-
-        //reenable interrupts
-        bitSet(ADCSRA, ADIE); //ON ADC
-        if(trig_mode)
-        {
-          adc_counter = -1;
-
-          delay(500);
-          bitSet(ACSR, ACIE); //comparator interrupt enable
-        }else{
-          delay(10);
-        }
+        bitSet(ACSR, ACIE); //comparator interrupt enable
+        delay(500);
       }
     }
 }//loop
 
-void docommand(void)
+inline void docommand(void)
 {
   newcmd = false;
-  switch (last_command = cmdpak.command)
+  switch (cmdpak.command)
   {
     case c_toggle_triggered:
+      cmdpak.data = trigger_level;
       trig_mode = !trig_mode;
-      if(trig_mode) bitClear(ACSR, ACD);  //comparator on
-      else bitSet(ACSR, ACD);  //comparator off
     break;
 
     case c_set_trig_level: //new trigger level
-      analogWrite( 3, cmdpak.data );
+      trigger_level = cmdpak.data;
+      analogWrite( 3, trigger_level );
     break;
 
+    case c_send_a_shot: //new trigger level
+      bitClear(ACSR, ACIE); //interrupt off
+      bitClear(ADCSRA, ADIE);
+      sending = true;
+    break;
+
+    default:
+      break;
   }//switch
 }
 
-//commands in
 void serialEvent()
 {
   int r = Serial.available();
   if(r / sizeof(sscommandpacket) && sizeof(sscommandpacket) == Serial.readBytes((unsigned char *)&cmdpak, sizeof(sscommandpacket)))
-    newcmd = true;
-  else Serial.read();
+    docommand();
 }

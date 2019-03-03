@@ -7,10 +7,9 @@
 #include <csimpSDL.h>
 #include <csimpGUI.h>
 
-std::string appname = "test_gui";
+std::string appname = "testquadtree";
 bool drawing = false;
 const SDL_Rect screen = {0, 0, 800, 600};
-
 
 cAllWidgets widgets(screen.w, screen.h);
 
@@ -74,7 +73,7 @@ void submain(void)
 					
 				case SDL_MOUSEBUTTONUP:
 					{
-						cButton b;
+						cintRect b;
 						b.r.x = sx0 < e.button.x ? sx0 : e.button.x;
 						b.r.y = sy0 < e.button.y ? sy0 : e.button.y;
 						b.r.w = sx0 < e.button.x ? e.button.x - sx0 : sx0 - e.button.x;
