@@ -16,7 +16,7 @@ Hardware
   But continous mode working with just plugging a signal in A5.
   
 Arduino side
-  Heavily changed Girino project files. They have their own GPL 3 licence.
+  Heavily changed Girino project files.
   ardu/girino.pak.trig
   
 PC side
