@@ -1,3 +1,4 @@
+[ABORTED project]
 # oscillo
 Arduino-pc SDL oscilloscope.
 
