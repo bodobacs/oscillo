@@ -3,7 +3,7 @@ Arduino-pc SDL oscilloscope.
 
 
 2020.04.27.
-Bought a real oscilloscope, because this arduino chip is not fast enough. ;) Wasted too much time and energy.
+Bought a real oscilloscope, because this arduino chip is not fast enough. ;) Wasted too much time and energy. I will use the libs started here.
 
 2019.03.03.
 Do not bother for now. I frequently edit this project, not sure about success.
